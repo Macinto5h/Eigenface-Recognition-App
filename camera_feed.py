@@ -38,21 +38,32 @@ class CameraFeed:
 				video_height = camera.get(cv2.CAP_PROP_FRAME_HEIGHT)
 
 				# Calculate x and y starting positions for highlight rectangle
-				x_pos = (int(video_width) // 2) - (image_width // 2)
-				y_pos = (int(video_height) // 2) - (image_height // 2)
+				x_pos = (int(video_width) // 2) - (image_width)
+				y_pos = (int(video_height) // 2) - (image_height)
 
 				# Create cropped image
 
 				# Draw rectangle on live image
-				cv2.rectangle(frame, 
+				frame_copy = frame.copy()
+				cv2.rectangle(frame_copy, 
 					(x_pos - 8, y_pos - 8), 
-					(x_pos + image_width, y_pos + image_height), 
-					(0, 0, 0), 
+					(x_pos + (image_width*2), y_pos + (image_height*2)), 
+					(0, 0, 255), 
 					thickness = 1, 
 					lineType = 8, 
 					shift = 0)
+				cv2.line(frame_copy,
+					(x_pos - 8, y_pos + 224),
+					(x_pos + (image_width*2), y_pos + 224),
+					(0, 0, 255),
+					thickness = 1)
+				cv2.line(frame_copy,
+					(x_pos - 8, y_pos + 306),
+					(x_pos + (image_width*2), y_pos + 306),
+					(0, 0, 255),
+					thickness = 1)
 				# Show image in rendered window
-				cv2.imshow(window_name, frame)
+				cv2.imshow(window_name, frame_copy)
 
 				# If no frame is retrieved end loop
 				if not ret:
@@ -66,8 +77,9 @@ class CameraFeed:
 				elif keypress % 256 == 32:
 					# SPACE pressed
 					# Crop image to desired length and return it
-					captured_photo = frame[y_pos:y_pos + image_height, x_pos:x_pos + image_width].copy()
-					captured_photo = cv2.cvtColor(captured_photo, cv2.COLOR_BGR2GRAY)
+					captured_photo = frame[y_pos:y_pos + (image_height*2), x_pos:x_pos + (image_width*2)].copy()
+					# captured_photo = cv2.cvtColor(captured_photo, cv2.COLOR_BGR2GRAY)
+					captured_photo = cv2.resize(captured_photo, (image_width, image_height))
 					break
 			camera.release()
 			cv2.destroyAllWindows()

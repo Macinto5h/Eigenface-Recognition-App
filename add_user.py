@@ -11,23 +11,17 @@ import cv2
 import os
 from camera_feed import CameraFeed
 from eigenface import Eigenface
+from controller import Controller
 
 """
 Wrapper class for the Add User Program
 """
-class AddUserApp:
+class AddUserApp(Controller):
 
 	"""
 	Initializer runs the driver program
 	"""
 	def __init__(self):
-
-		# "Constants"
-		IMAGE_WIDTH = 178
-		IMAGE_HEIGHT = 218
-		USER_DIR = "./users/"
-
-
 		# Variables for program loop
 		loop_count = 0
 		app_failure = False
@@ -36,7 +30,7 @@ class AddUserApp:
 
 		while (app_run):
 
-			photo = feed.capture('Add as User', IMAGE_WIDTH, IMAGE_HEIGHT)
+			photo = feed.capture('Add as User', self.IMAGE_WIDTH, self.IMAGE_HEIGHT)
 
 			if photo is None:
 				# Image is not being received properly, end the function
@@ -45,13 +39,21 @@ class AddUserApp:
 			else:
 				app_run = False
 				# Run eigenface app on image
+				eigenface = Eigenface("../eigenface-training-images/", self.USER_DIR, "./eigenfaces/", "./avg_face/", (218, 178))
+				eigenface.build()
+				fc_dist, fs_dist = eigenface.getDistances(cv2.cvtColor(photo, cv2.COLOR_BGR2GRAY))
 				# if it is face space proceed
 				# if it is not a face class, add the user
-				image_count = 0
-				for image in os.listdir(USER_DIR):
-					image_count += 1
-				cv2.imwrite("{}{}.jpg".format(USER_DIR, image_count), photo)
+				if (fc_dist > self.FACE_CLASS_THRESHOLD):
+					image_count = 0
+					for image in os.listdir(self.USER_DIR):
+						image_count += 1
+					cv2.imwrite("{}{}.jpg".format(self.USER_DIR, image_count), photo)
+				else:
+					print("User already exists in the system")
+				print("This is fc dist: {:.2e}, this is fs dist: {:.2e}".format(fc_dist, fs_dist))
 				# else the user already exists in the system deny them.
+
 				# if not in face space
 					# bad image? Offers chance to retake image up to 2 more times
 		print ("Image Retrieved Successfully" if not app_failure else "Photo failed to load")
