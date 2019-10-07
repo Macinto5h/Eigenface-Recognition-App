@@ -11,26 +11,27 @@ import os
 import numpy as np
 from camera_feed import CameraFeed
 from eigenface import Eigenface
+from controller import Controller
 
 """
 Class that handles the login controller
 """
-class LoginApp:
+class LoginApp(Controller):
 	"""
 	Initializer starts the driver
 	"""
 	def __init__(self):
-		# "constants"
-		IMAGE_WIDTH = 178
-		IMAGE_HEIGHT = 218
-		USER_DIR = "./users"
-
 		feed = CameraFeed()
 
-		photo = feed.capture("User login", IMAGE_WIDTH, IMAGE_HEIGHT)
-		eigenface = Eigenface("../eigenface-training-images/", "./users/", "./eigenfaces/", "./avg_face/", (IMAGE_HEIGHT, IMAGE_WIDTH))
+		photo = feed.capture("User login", self.IMAGE_WIDTH, self.IMAGE_HEIGHT)
+		eigenface = Eigenface(self.TRAINING_DIR, self.USER_DIR, self.EIGENFACE_DIR, self.AVG_DIR, (self.IMAGE_HEIGHT, self.IMAGE_WIDTH))
 		eigenface.build()
-		fc_dist, fs_dist = eigenface.getDistances(photo)
+		fc_dist, fs_dist = eigenface.getDistances(cv2.cvtColor(photo, cv2.COLOR_BGR2GRAY))
+
+		if (fc_dist < self.FACE_CLASS_THRESHOLD):
+			print("Login is successful")
+		else:
+			print("Failed to recognize user")
 		print("This is fc dist: {:.2e}, this is fs dist: {:.2e}".format(fc_dist, fs_dist))
 if __name__ == "__main__":
 	login_app = LoginApp()
