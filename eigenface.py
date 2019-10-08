@@ -13,7 +13,6 @@ import cv2
 import os
 import sys
 import numpy as np
-# from mergesort import MergeSort
 
 """
 Eigenface class that contains all of its functions, fields, etc.
@@ -78,10 +77,11 @@ class Eigenface:
 		self.avg_face = mean.reshape(self.IMAGE_DIM)
 		cv2.imwrite("{}avg_face.jpg".format(self.AVG_DIR), self.avg_face)
 		# Subtract the mean from all of the original images
+		mean_sub_images = np.zeros((len(image_matrix), self.IMAGE_DIM[0] * self.IMAGE_DIM[1]))
 		for i in range(0, len(image_matrix)):
-			image_matrix[i,:] = image_matrix[i,:] - mean
+			mean_sub_images[i,:] = image_matrix[i,:] - mean
 		# Create a matrix with equivalent eigenvectors with the covariance
-		square_matrix = image_matrix.dot(np.transpose(image_matrix))
+		square_matrix = mean_sub_images.dot(np.transpose(mean_sub_images))
 		# retrieve the vectors and the values
 		eigenvalues, eigenvectors = np.linalg.eig(square_matrix)
 		start_index = 2
@@ -95,6 +95,8 @@ class Eigenface:
 			eigenface_index += 1
 		for i in range(len(self.eigenfaces)):
 			cv2.imwrite('{}{}.jpg'.format(self.EIGENFACE_DIR, i), self.eigenfaces[i,:].reshape(self.IMAGE_DIM))
+		cv2.imwrite("import_test.jpg", image_matrix[i,:].reshape(self.IMAGE_DIM))
+		cv2.imwrite("reduce_mean_test.jpg", mean_sub_images[i,:].reshape(self.IMAGE_DIM))
 	"""
 	Returns the distances of a given input image
 	"""
@@ -115,9 +117,7 @@ class Eigenface:
 		cv2.imwrite("subtract_avg_face_{}.jpg".format(self.image_num), image_dif)
 		face_space_var = np.zeros((self.IMAGE_DIM))
 		for i in range(self.FACE_NUMBER):
-			face_space_var += (weight_vectors[i] * self.normalize(self.eigenfaces[i]).reshape(self.IMAGE_DIM))
-		# print(face_space_var)
-		# print("First weight: {}".format(weight_vectors[i]))
+			face_space_var += (weight_vectors[i] * self.eigenfaces[i].reshape(self.IMAGE_DIM))
 		cv2.imwrite('face_space_proj_{}.jpg'.format(self.image_num), face_space_var)
 		self.image_num += 1
 		fs_dist = np.linalg.norm(image_dif - face_space_var)
@@ -131,7 +131,7 @@ class Eigenface:
 		weight_vectors = np.zeros((len(self.eigenfaces)))
 		# Add entries into weight vector
 		for i in range(len(self.eigenfaces)):
-			vector = self.normalize(self.eigenfaces[i])
+			vector = self.eigenfaces[i]
 			img_dif = (input_image - self.avg_face).flatten()
 			w_vector = (np.transpose(vector)).dot(img_dif)
 			weight_vectors[i] = w_vector
@@ -144,12 +144,6 @@ if __name__ == '__main__':
 	# Initialize class
 	eigenface = Eigenface("../eigenface-training-images/", "../users/", "./eigenfaces/", "./avg_face/", (218, 178))
 	eigenface.build()
-	# window_name = 'Loading average face'
-	# cv2.namedWindow(window_name)
-	# output = cv2.resize(eigenface.avg_face, (0,0), fx = 2, fy = 2)
-	# cv2.imshow(window_name, output)
-	# cv2.waitKey(0)
-	# cv2.destroyAllWindows()
 	print("Test 1: Unknown User")
 	photo = cv2.imread("../eigenface-training-images/mdark-01.jpg",0)
 	fc_dist, fs_dist = eigenface.getDistances(photo)

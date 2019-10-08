@@ -44,13 +44,16 @@ class AddUserApp(Controller):
 				fc_dist, fs_dist = eigenface.getDistances(cv2.cvtColor(photo, cv2.COLOR_BGR2GRAY))
 				# if it is face space proceed
 				# if it is not a face class, add the user
-				if (fc_dist > self.FACE_CLASS_THRESHOLD):
-					image_count = 0
-					for image in os.listdir(self.USER_DIR):
-						image_count += 1
-					cv2.imwrite("{}{}.jpg".format(self.USER_DIR, image_count), photo)
+				if (fs_dist < self.FACE_SPACE_THRESHOLD):
+					if (fc_dist > self.FACE_CLASS_THRESHOLD):
+						image_count = 0
+						for image in os.listdir(self.USER_DIR):
+							image_count += 1
+						cv2.imwrite("{}{}.jpg".format(self.USER_DIR, image_count), photo)
+					else:
+						print("User already exists in the system")
 				else:
-					print("User already exists in the system")
+					print("User face not detected")
 				print("This is fc dist: {:.2e}, this is fs dist: {:.2e}".format(fc_dist, fs_dist))
 				# else the user already exists in the system deny them.
 

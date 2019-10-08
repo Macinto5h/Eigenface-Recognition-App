@@ -28,10 +28,13 @@ class LoginApp(Controller):
 		eigenface.build()
 		fc_dist, fs_dist = eigenface.getDistances(cv2.cvtColor(photo, cv2.COLOR_BGR2GRAY))
 
-		if (fc_dist < self.FACE_CLASS_THRESHOLD):
-			print("Login is successful")
+		if (fs_dist < self.FACE_SPACE_THRESHOLD):
+			if (fc_dist < self.FACE_CLASS_THRESHOLD):
+				print("Login is successful")
+			else:
+				print("Failed to recognize user")
 		else:
-			print("Failed to recognize user")
+			print("Failed to recognize a face in the image.")
 		print("This is fc dist: {:.2e}, this is fs dist: {:.2e}".format(fc_dist, fs_dist))
 if __name__ == "__main__":
 	login_app = LoginApp()

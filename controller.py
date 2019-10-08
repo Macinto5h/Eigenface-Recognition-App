@@ -18,6 +18,6 @@ class Controller:
 	TRAINING_DIR = "../eigenface-training-images/"
 	EIGENFACE_DIR = "./eigenfaces/"
 	AVG_DIR = "./avg_face/"
-	FACE_CLASS_THRESHOLD = 3 * (10 ** 8)
+	FACE_CLASS_THRESHOLD = 7.5 * (10 ** 7)
 	# Still figuring out face space threshold
-	FACE_SPACE_THRESHOLD = 0
+	FACE_SPACE_THRESHOLD = 5 * (10 ** 12)
