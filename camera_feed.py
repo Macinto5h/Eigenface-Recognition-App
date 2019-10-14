@@ -12,6 +12,7 @@ Allows user to take a picture of themselves for the program to reference during 
 
 # import opencv 
 import cv2
+import numpy as np 
 
 """
 Wrapper class for the select image app.
@@ -20,13 +21,16 @@ class CameraFeed:
 	"""
 	Returns a photo captured from the default webcam
 	"""
-	def capture(self, window_name, image_width, image_height):
+	def capture(self, window_name, image_width, image_height, message):
 		try:
 			# Set webcam to variable
 			camera = cv2.VideoCapture(0)
 
 			# Set up user window
 			cv2.namedWindow(window_name)
+
+			# Image brightness offset
+			brightness = 0
 
 			# Infinite loop until escape is pressed or window closed
 			while cv2.getWindowProperty(window_name, cv2.WND_PROP_VISIBLE) >= 1:
@@ -41,9 +45,9 @@ class CameraFeed:
 				x_pos = (int(video_width) // 2) - (image_width)
 				y_pos = (int(video_height) // 2) - (image_height)
 
-				# Create cropped image
-
 				# Draw rectangle on live image
+				# frame_temp = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+				# frame_copy = self.brighten(frame_temp,brightness)
 				frame_copy = frame.copy()
 				cv2.rectangle(frame_copy, 
 					(x_pos - 8, y_pos - 8), 
@@ -52,16 +56,13 @@ class CameraFeed:
 					thickness = 1, 
 					lineType = 8, 
 					shift = 0)
-				cv2.line(frame_copy,
-					(x_pos - 8, y_pos + 224),
-					(x_pos + (image_width*2), y_pos + 224),
+				cv2.putText(frame_copy,
+					message,
+					(0,25),
+					cv2.FONT_HERSHEY_SIMPLEX,
+					1,
 					(0, 0, 255),
-					thickness = 1)
-				cv2.line(frame_copy,
-					(x_pos - 8, y_pos + 306),
-					(x_pos + (image_width*2), y_pos + 306),
-					(0, 0, 255),
-					thickness = 1)
+					3)
 				# Show image in rendered window
 				cv2.imshow(window_name, frame_copy)
 
@@ -81,15 +82,22 @@ class CameraFeed:
 					# captured_photo = cv2.cvtColor(captured_photo, cv2.COLOR_BGR2GRAY)
 					captured_photo = cv2.resize(captured_photo, (image_width, image_height))
 					break
+				elif keypress % 256 == 91:
+					brightness -= 10
+				elif keypress % 256 == 93:
+					brightness += 10
 			camera.release()
 			cv2.destroyAllWindows()
+			# return self.brightness(captured_photo, brightness)
 			return captured_photo
 		except cv2.error as e:
-			print('Default webcame not found. Make sure the device is connected.')
+			print('Default webcam not found. Make sure the device is connected.')
 			return None
+	def brighten(self, image, offset):
+		return image
 
 if __name__ == '__main__':
 	# Initialize class
 	add_user_app = CameraFeed()
-	photo = add_user_app.capture('Add as user', 178, 218)
+	photo = add_user_app.capture('Add as user', 178, 178, "Test")
 	cv2.imwrite("test_photograph.jpg", photo)
