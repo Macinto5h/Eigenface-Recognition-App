@@ -28,7 +28,11 @@ class Eigenface:
 		# Load each image from the directory
 		for file in os.listdir(directory):
 			# read the image as a matrix
-			image = cv2.imread("{}{}".format(directory,file), 0)
+			tmp_image = cv2.imread("{}{}".format(directory,file), 0)
+			if (tmp_image.shape[0] != tmp_image.shape[1]):
+				image = tmp_image[20:tmp_image.shape[0] - 20, 0:self.IMAGE_DIM[1]]
+			else:
+				image = tmp_image
 			# Removes null cases
 			if image is not None:
 				image_array.append(image)
@@ -39,19 +43,20 @@ class Eigenface:
 	"""
 	def __init__(self, test_dir, user_dir, eigenface_dir, avg_dir, image_dim):
 		# "Constants"
-		self.FACE_NUMBER = 25
+		self.FACE_NUMBER = 35
 		self.TEST_DIR = test_dir
 		self.USER_DIR = user_dir
 		self.EIGENFACE_DIR = eigenface_dir
 		self.AVG_DIR = avg_dir
 		self.IMAGE_DIM = image_dim
 		self.image_num = 0
+		self.avg_brightness = 0
 
 		# Fields
 		self.images = self.getImages(self.TEST_DIR)
 		self.users = self.getImages(self.USER_DIR)
 		self.avg_face = self.getImages(self.AVG_DIR)[0]
-		self.eigenfaces = np.zeros((self.FACE_NUMBER, self.IMAGE_DIM[0] * self.IMAGE_DIM[1]))
+		self.eigenfaces = np.zeros((self.FACE_NUMBER, self.IMAGE_DIM[1] ** 2))
 
 	"""
 	Builds/Rebuilds eigenfaces when called
@@ -59,7 +64,7 @@ class Eigenface:
 	def build(self):
 		# convert all of the loaded images into a matrix for the Eigenface algorithm to use
 		# Create the image matrix where the image data can be manipulated
-		image_matrix = np.zeros((len(self.images) + len(self.users), self.IMAGE_DIM[0] * self.IMAGE_DIM[1]))
+		image_matrix = np.zeros((len(self.images) + len(self.users), self.IMAGE_DIM[1] ** 2))
 		# Add flattened image data into the image matrix
 		im_index = 0
 		for i in range(0, len(self.images)):
@@ -69,44 +74,49 @@ class Eigenface:
 			image_matrix[im_index,:] = self.users[i].flatten()
 			im_index += 1
 		# Calculate the mean image with the image matrix
-		matrix_sum = image_matrix[0,:]
-		for i in range(1, len(image_matrix)):
-			matrix_sum = matrix_sum + image_matrix[i,:]
-		mean = matrix_sum * (1 / len(image_matrix)) 
+		matrix_sum = np.zeros((self.IMAGE_DIM[1] ** 2))
+		# matrix_sum = image_matrix[0,:]
+		for i in range(len(image_matrix)):
+			matrix_sum += image_matrix[i,:]
+		mean = matrix_sum * (1 / len(image_matrix))
 		# Create the average face
-		self.avg_face = mean.reshape(self.IMAGE_DIM)
+		self.avg_face = mean.reshape((self.IMAGE_DIM[1], self.IMAGE_DIM[1]))
 		cv2.imwrite("{}avg_face.jpg".format(self.AVG_DIR), self.avg_face)
 		# Subtract the mean from all of the original images
-		mean_sub_images = np.zeros((len(image_matrix), self.IMAGE_DIM[0] * self.IMAGE_DIM[1]))
+		mean_sub_images = np.zeros((len(image_matrix), self.IMAGE_DIM[1] ** 2))
 		for i in range(0, len(image_matrix)):
 			mean_sub_images[i,:] = image_matrix[i,:] - mean
 		# Create a matrix with equivalent eigenvectors with the covariance
-		square_matrix = mean_sub_images.dot(np.transpose(mean_sub_images))
+		transpose_mean_img = np.transpose(mean_sub_images)
+		square_matrix = mean_sub_images.dot(transpose_mean_img)
 		# retrieve the vectors and the values
 		eigenvalues, eigenvectors = np.linalg.eig(square_matrix)
 		start_index = 2
 		end_index = self.FACE_NUMBER + 2
 		eigenface_index = 0
 		for i in range(start_index, end_index):
-			eigenface = eigenvectors[0,i] * image_matrix[i,:]
-			for j in range(start_index + 1, end_index):
-				eigenface += (eigenvectors[j,i] * image_matrix[j,:])
+			eigenface = (eigenvectors[0,i] * mean_sub_images[i,:])
+			# for j in range(start_index + 1, end_index):
+				# eigenface += eigenvectors[j,i] * mean_sub_images[j,:]
+			for j in range(1, len(mean_sub_images)):
+				eigenface += (eigenvectors[j,i] * mean_sub_images[j,:])
 			self.eigenfaces[eigenface_index,:] = eigenface
 			eigenface_index += 1
 		for i in range(len(self.eigenfaces)):
-			cv2.imwrite('{}{}.jpg'.format(self.EIGENFACE_DIR, i), self.eigenfaces[i,:].reshape(self.IMAGE_DIM))
-		cv2.imwrite("import_test.jpg", image_matrix[i,:].reshape(self.IMAGE_DIM))
-		cv2.imwrite("reduce_mean_test.jpg", mean_sub_images[i,:].reshape(self.IMAGE_DIM))
+			eigenface = self.eigenfaces[i,:].reshape((self.IMAGE_DIM[1],self.IMAGE_DIM[1]))
+			cv2.imwrite('{}{}.jpg'.format(self.EIGENFACE_DIR, i), eigenface)
 	"""
 	Returns the distances of a given input image
 	"""
 	def getDistances(self, input_image):
-		read_image = input_image
-		weight_vectors = self.getWeightVectors(read_image)
+		if (input_image.shape[0] != input_image.shape[1]):
+			read_image = input_image[20:input_image.shape[0]-20, 0:input_image.shape[1]]
+		else:
+			read_image = input_image
+
+		weight_vectors = self.getWeightVectors(read_image.copy())
 
 		fc_dist = sys.maxsize
-		matrix_len = len(weight_vectors)
-
 		for i in range(len(self.users)):
 			face_class = self.getWeightVectors(self.users[i])
 			distance = np.linalg.norm(weight_vectors - face_class)
@@ -115,12 +125,19 @@ class Eigenface:
 				fc_dist = distance
 		image_dif = read_image - self.avg_face
 		cv2.imwrite("subtract_avg_face_{}.jpg".format(self.image_num), image_dif)
-		face_space_var = np.zeros((self.IMAGE_DIM))
-		for i in range(self.FACE_NUMBER):
-			face_space_var += (weight_vectors[i] * self.eigenfaces[i].reshape(self.IMAGE_DIM))
+		face_space_var = np.zeros(((self.IMAGE_DIM[1], self.IMAGE_DIM[1])))
+		eigenface = self.eigenfaces[0,:].reshape((self.IMAGE_DIM[1], self.IMAGE_DIM[1]))
+		normalized_face = self.normalize(eigenface)
+		face_space_var = (weight_vectors[0] * normalized_face)
+		for i in range(1,self.FACE_NUMBER):
+			eigenface = self.eigenfaces[i,:].reshape((self.IMAGE_DIM[1], self.IMAGE_DIM[1]))
+			normalized_face = self.normalize(eigenface)
+			face_space_var += (weight_vectors[i] * normalized_face)
 		cv2.imwrite('face_space_proj_{}.jpg'.format(self.image_num), face_space_var)
+		space_dif = image_dif - face_space_var
+		cv2.imwrite('face_space_dif_{}.jpg'.format(self.image_num), space_dif)
+		fs_dist = np.linalg.norm(space_dif)
 		self.image_num += 1
-		fs_dist = np.linalg.norm(image_dif - face_space_var)
 		return fc_dist, fs_dist
 
 	"""
@@ -131,21 +148,31 @@ class Eigenface:
 		weight_vectors = np.zeros((len(self.eigenfaces)))
 		# Add entries into weight vector
 		for i in range(len(self.eigenfaces)):
-			vector = self.eigenfaces[i]
+			vector = self.normalize(self.eigenfaces[i,:]).flatten()
 			img_dif = (input_image - self.avg_face).flatten()
 			w_vector = (np.transpose(vector)).dot(img_dif)
 			weight_vectors[i] = w_vector
 		return weight_vectors
 
 	def normalize(self, matrix):
-		temp_matrix = (1 / np.linalg.norm(matrix)) * matrix
+		distance = (1 / np.linalg.norm(matrix))
+		temp_matrix = distance * matrix
 		return temp_matrix
 if __name__ == '__main__':
 	# Initialize class
 	eigenface = Eigenface("../eigenface-training-images/", "../users/", "./eigenfaces/", "./avg_face/", (218, 178))
 	eigenface.build()
-	print("Test 1: Unknown User")
+	print("Test 1: Unknown Users")
 	photo = cv2.imread("../eigenface-training-images/mdark-01.jpg",0)
+	fc_dist, fs_dist = eigenface.getDistances(photo)
+	print("This is fc dist: {:.2e}, this is fs dist: {:.2e}".format(fc_dist, fs_dist))
+	photo = cv2.imread("../eigenface-training-images/mlight-01.jpg",0)
+	fc_dist, fs_dist = eigenface.getDistances(photo)
+	print("This is fc dist: {:.2e}, this is fs dist: {:.2e}".format(fc_dist, fs_dist))
+	photo = cv2.imread("../eigenface-training-images/wdark-01.jpg",0)
+	fc_dist, fs_dist = eigenface.getDistances(photo)
+	print("This is fc dist: {:.2e}, this is fs dist: {:.2e}".format(fc_dist, fs_dist))
+	photo = cv2.imread("../eigenface-training-images/wlight-01.jpg",0)
 	fc_dist, fs_dist = eigenface.getDistances(photo)
 	print("This is fc dist: {:.2e}, this is fs dist: {:.2e}".format(fc_dist, fs_dist))
 	print("Test 2: Known User")
@@ -154,5 +181,8 @@ if __name__ == '__main__':
 	print("This is fc dist: {:.2e}, this is fs dist: {:.2e}".format(fc_dist, fs_dist))
 	print("Test 3: No face")
 	photo = cv2.imread("test_photograph.jpg",0)
+	fc_dist, fs_dist = eigenface.getDistances(photo)
+	print("This is fc dist: {:.2e}, this is fs dist: {:.2e}".format(fc_dist, fs_dist))
+	photo = cv2.imread("test_photograph_2.jpg",0)
 	fc_dist, fs_dist = eigenface.getDistances(photo)
 	print("This is fc dist: {:.2e}, this is fs dist: {:.2e}".format(fc_dist, fs_dist))
