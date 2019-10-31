@@ -28,7 +28,8 @@ class Eigenface:
 		# Load each image from the directory
 		for file in os.listdir(directory):
 			# read the image as a matrix
-			tmp_image = cv2.imread("{}{}".format(directory,file), 0)
+			load_image = cv2.imread("{}{}".format(directory,file), 0)
+			tmp_image = cv2.GaussianBlur(load_image, (5,5), cv2.BORDER_DEFAULT)
 			if (tmp_image.shape[0] != tmp_image.shape[1]):
 				image = tmp_image[20:tmp_image.shape[0] - 20, 0:self.IMAGE_DIM[1]]
 			else:
@@ -57,6 +58,7 @@ class Eigenface:
 		self.users = self.getImages(self.USER_DIR)
 		self.avg_face = self.getImages(self.AVG_DIR)[0]
 		self.eigenfaces = np.zeros((self.FACE_NUMBER, self.IMAGE_DIM[1] ** 2))
+		self.eigenfaces_norm = np.zeros((self.FACE_NUMBER, self.IMAGE_DIM[1] ** 2))
 
 	"""
 	Builds/Rebuilds eigenfaces when called
@@ -96,11 +98,10 @@ class Eigenface:
 		eigenface_index = 0
 		for i in range(start_index, end_index):
 			eigenface = (eigenvectors[0,i] * mean_sub_images[i,:])
-			# for j in range(start_index + 1, end_index):
-				# eigenface += eigenvectors[j,i] * mean_sub_images[j,:]
 			for j in range(1, len(mean_sub_images)):
 				eigenface += (eigenvectors[j,i] * mean_sub_images[j,:])
 			self.eigenfaces[eigenface_index,:] = eigenface
+			self.eigenfaces_norm[eigenface_index,:] = self.normalize(eigenface)
 			eigenface_index += 1
 		for i in range(len(self.eigenfaces)):
 			eigenface = self.eigenfaces[i,:].reshape((self.IMAGE_DIM[1],self.IMAGE_DIM[1]))
@@ -124,7 +125,7 @@ class Eigenface:
 			if (distance < fc_dist):
 				fc_dist = distance
 		image_dif = read_image - self.avg_face
-		cv2.imwrite("subtract_avg_face_{}.jpg".format(self.image_num), image_dif)
+		# cv2.imwrite("subtract_avg_face_{}.jpg".format(self.image_num), image_dif)
 		face_space_var = np.zeros(((self.IMAGE_DIM[1], self.IMAGE_DIM[1])))
 		eigenface = self.eigenfaces[0,:].reshape((self.IMAGE_DIM[1], self.IMAGE_DIM[1]))
 		normalized_face = self.normalize(eigenface)
@@ -133,12 +134,27 @@ class Eigenface:
 			eigenface = self.eigenfaces[i,:].reshape((self.IMAGE_DIM[1], self.IMAGE_DIM[1]))
 			normalized_face = self.normalize(eigenface)
 			face_space_var += (weight_vectors[i] * normalized_face)
-		cv2.imwrite('face_space_proj_{}.jpg'.format(self.image_num), face_space_var)
+		# cv2.imwrite('face_space_proj_{}.jpg'.format(self.image_num), face_space_var)
 		space_dif = image_dif - face_space_var
-		cv2.imwrite('face_space_dif_{}.jpg'.format(self.image_num), space_dif)
+		# cv2.imwrite('face_space_dif_{}.jpg'.format(self.image_num), space_dif)
 		fs_dist = np.linalg.norm(space_dif)
 		self.image_num += 1
 		return fc_dist, fs_dist
+
+	def getFaceSpaceDistance(self, input_image):
+		weight_vectors = self.getWeightVectors(input_image)
+		image_dif = input_image - self.avg_face
+		face_space_var = np.zeros(((self.IMAGE_DIM[1], self.IMAGE_DIM[1])))
+		eigenface = self.eigenfaces_norm[0,:].reshape((self.IMAGE_DIM[1], self.IMAGE_DIM[1]))
+		# normalized_face = self.normalize(eigenface)
+		face_space_var = (weight_vectors[0] * eigenface)
+		for i in range(1,self.FACE_NUMBER):
+			eigenface = self.eigenfaces_norm[i,:].reshape((self.IMAGE_DIM[1], self.IMAGE_DIM[1]))
+			# normalized_face = self.normalize(eigenface)
+			face_space_var += (weight_vectors[i] * eigenface)
+		space_dif = image_dif - face_space_var
+		fs_dist = np.linalg.norm(space_dif)
+		return fs_dist
 
 	"""
 	Returns the weight vectors of a given image
@@ -148,7 +164,8 @@ class Eigenface:
 		weight_vectors = np.zeros((len(self.eigenfaces)))
 		# Add entries into weight vector
 		for i in range(len(self.eigenfaces)):
-			vector = self.normalize(self.eigenfaces[i,:]).flatten()
+			# vector = self.normalize(self.eigenfaces[i,:]).flatten()
+			vector = self.eigenfaces_norm[i,:]
 			img_dif = (input_image - self.avg_face).flatten()
 			w_vector = (np.transpose(vector)).dot(img_dif)
 			weight_vectors[i] = w_vector
@@ -175,14 +192,32 @@ if __name__ == '__main__':
 	photo = cv2.imread("../eigenface-training-images/wlight-01.jpg",0)
 	fc_dist, fs_dist = eigenface.getDistances(photo)
 	print("This is fc dist: {:.2e}, this is fs dist: {:.2e}".format(fc_dist, fs_dist))
-	print("Test 2: Known User")
-	photo = cv2.imread("../users/0.jpg",0)
-	fc_dist, fs_dist = eigenface.getDistances(photo)
-	print("This is fc dist: {:.2e}, this is fs dist: {:.2e}".format(fc_dist, fs_dist))
+	# print("Test 2: Known User")
+	# photo = cv2.imread("../users/0.jpg",0)
+	# fc_dist, fs_dist = eigenface.getDistances(photo)
+	# print("This is fc dist: {:.2e}, this is fs dist: {:.2e}".format(fc_dist, fs_dist))
 	print("Test 3: No face")
 	photo = cv2.imread("test_photograph.jpg",0)
 	fc_dist, fs_dist = eigenface.getDistances(photo)
 	print("This is fc dist: {:.2e}, this is fs dist: {:.2e}".format(fc_dist, fs_dist))
 	photo = cv2.imread("test_photograph_2.jpg",0)
 	fc_dist, fs_dist = eigenface.getDistances(photo)
+	print("This is fc dist: {:.2e}, this is fs dist: {:.2e}".format(fc_dist, fs_dist))
+	photo = cv2.imread("test_photograph_3.jpg",0)
+	fc_dist, fs_dist = eigenface.getDistances(photo)
+	print("This is fc dist: {:.2e}, this is fs dist: {:.2e}".format(fc_dist, fs_dist))
+	print("Test 4: Gaussian Blur on last unknown user")
+	photo = cv2.imread("../eigenface-training-images/wlight-01.jpg",0)
+	dst = cv2.GaussianBlur(photo, (5,5), cv2.BORDER_DEFAULT)
+	fc_dist, fs_dist = eigenface.getDistances(dst)
+	print("This is fc dist: {:.2e}, this is fs dist: {:.2e}".format(fc_dist, fs_dist))
+	# print("Test 5: Gaussian Blur of known user")
+	# photo = cv2.imread("../users/0.jpg",0)
+	# dst = cv2.GaussianBlur(photo, (5,5), cv2.BORDER_DEFAULT)
+	# fc_dist, fs_dist = eigenface.getDistances(dst)
+	# print("This is fc dist: {:.2e}, this is fs dist: {:.2e}".format(fc_dist, fs_dist))
+	print("Test 6: Gaussian Blur of no face")
+	photo = cv2.imread("test_photograph_3.jpg",0)
+	dst = cv2.GaussianBlur(photo, (5,5), cv2.BORDER_DEFAULT)
+	fc_dist, fs_dist = eigenface.getDistances(dst)
 	print("This is fc dist: {:.2e}, this is fs dist: {:.2e}".format(fc_dist, fs_dist))
