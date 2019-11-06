@@ -9,6 +9,7 @@ By: M.J. Camara
 
 import cv2
 import os
+print("before importing local files")
 from camera_feed import CameraFeed
 from eigenface import Eigenface
 from controller import Controller
@@ -37,7 +38,7 @@ class AddUserApp(Controller):
 				app_failure = True
 			else:
 				# Run eigenface app on image
-				eigenface = Eigenface("../eigenface-training-images/", self.USER_DIR, "./eigenfaces/", "./avg_face/", (218, 178))
+				eigenface = Eigenface(self.TRAINING_DIR, self.USER_DIR, self.EIGENFACE_DIR, self.AVG_DIR, (self.IMAGE_WIDTH, self.IMAGE_HEIGHT))
 				eigenface.build()
 				gray_photo = cv2.cvtColor(photo, cv2.COLOR_BGR2GRAY)
 				value = 0
