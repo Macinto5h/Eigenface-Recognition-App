@@ -9,7 +9,6 @@ By: M.J. Camara
 
 import cv2
 import os
-print("before importing local files")
 from camera_feed import CameraFeed
 from eigenface import Eigenface
 from controller import Controller
@@ -19,10 +18,7 @@ Wrapper class for the Add User Program
 """
 class AddUserApp(Controller):
 
-	"""
-	Initializer runs the driver program
-	"""
-	def __init__(self):
+	def run(self):
 		# Variables for program loop
 		try_count = 0
 		usr_img_count = 0
@@ -70,8 +66,10 @@ class AddUserApp(Controller):
 			print("MESSAGE: Amount of attempts exceeded, program has automatically closed.")
 		elif (usr_img_count == 3):
 			print("MESSAGE: All images have been received, user successfully added.")
+			return True
 		else:
 			print ("MESSAGE: Photo failed to load")
+		return False
 if __name__ == '__main__':
 	# Initialize class
 	add_user_app = AddUserApp()

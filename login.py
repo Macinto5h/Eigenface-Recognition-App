@@ -20,7 +20,7 @@ class LoginApp(Controller):
 	"""
 	Initializer starts the driver
 	"""
-	def __init__(self):
+	def run(self):
 		feed = CameraFeed()
 
 		photo = feed.capture("User login", self.IMAGE_WIDTH, self.IMAGE_HEIGHT, "Press 'Space' to Login")
@@ -48,10 +48,13 @@ class LoginApp(Controller):
 		if (fs_dist < self.FACE_SPACE_THRESHOLD):
 			if (fc_dist < self.FACE_CLASS_THRESHOLD):
 				print("MESSAGE: Login successful")
+				return True
 			else:
 				print("MESSAGE: Failed to recognize user")
 		else:
 			print("MESSAGE: Failed to recognize face")
+		return False
 		# print("----- This is fc dist: {:.2e}, this is fs dist: {:.2e}".format(fc_dist, fs_dist))
 if __name__ == "__main__":
 	login_app = LoginApp()
+	login_app.run()
