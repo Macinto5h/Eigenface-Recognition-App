@@ -18,10 +18,7 @@ Wrapper class for the Add User Program
 """
 class AddUserApp(Controller):
 
-	"""
-	Initializer runs the driver program
-	"""
-	def __init__(self):
+	def run(self):
 		# Variables for program loop
 		try_count = 0
 		usr_img_count = 0
@@ -37,7 +34,7 @@ class AddUserApp(Controller):
 				app_failure = True
 			else:
 				# Run eigenface app on image
-				eigenface = Eigenface("../eigenface-training-images/", self.USER_DIR, "./eigenfaces/", "./avg_face/", (218, 178))
+				eigenface = Eigenface(self.TRAINING_DIR, self.USER_DIR, self.EIGENFACE_DIR, self.AVG_DIR, (self.IMAGE_WIDTH, self.IMAGE_HEIGHT))
 				eigenface.build()
 				gray_photo = cv2.cvtColor(photo, cv2.COLOR_BGR2GRAY)
 				value = 0
@@ -69,8 +66,10 @@ class AddUserApp(Controller):
 			print("MESSAGE: Amount of attempts exceeded, program has automatically closed.")
 		elif (usr_img_count == 3):
 			print("MESSAGE: All images have been received, user successfully added.")
+			return True
 		else:
 			print ("MESSAGE: Photo failed to load")
+		return False
 if __name__ == '__main__':
 	# Initialize class
 	add_user_app = AddUserApp()
