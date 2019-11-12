@@ -49,7 +49,6 @@ int main(int argc, char *argv[]) {
 	}
 
     struct passwd *p = getpwuid(getuid());
-    // printf("User name: %s\n", p -> pw_name);
 
 	pam_set_item(handle, PAM_USER, p -> pw_name);
 

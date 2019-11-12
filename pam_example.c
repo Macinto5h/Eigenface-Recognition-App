@@ -5,12 +5,10 @@
 #include <limits.h>
 #include <python3.6/Python.h>
 #include <string.h>
+#include <pwd.h>
 
 #define PASS_MAX_LEN 1000
 #define THIS_FILE_NAME "pam_example.c"
-
-// Global variable
-char *mode;
 
 /* custom conversation function */
 int conversation(int num_msg, const struct pam_message **msg, struct pam_response **resp, void *appdata_prt) {
@@ -99,19 +97,6 @@ int main(int argc, char *argv[]) {
 	const char *service_name = "pam_example";
 	int retval;
 	char *username;
-	printf("argv 0: %s \n", argv[0]);
-	printf("argv 1: %s \n", argv[1]);
-
-	char *argument = argv[1];
-
-	if (argc > 1 && strcmp(argument, "-a") == 0) {
-		mode = "add_user";
-	} else if (argc == 1 || strcmp(argument, "-l") == 0 ) {
-		mode = "login";
-	} else {
-		printf("Invalid argument. To login use no argument or '-l'. To add yourself as a user use '-a'");
-		return 1;
-	}
 
 	retval = pam_start(service_name, NULL, &conv, &handle);
 	if (retval != PAM_SUCCESS) {
@@ -121,7 +106,8 @@ int main(int argc, char *argv[]) {
 		printf("Pam start success \n");
 	}
 
-	pam_set_item(handle, PAM_USER, "mac");
+	struct passwd *p = getpwuid(getuid());
+	pam_set_item(handle, PAM_USER, p -> pw_name);
 
 	retval = pam_authenticate(handle, 0);
 	if (retval != PAM_SUCCESS) {
@@ -131,4 +117,5 @@ int main(int argc, char *argv[]) {
 		printf("Pam authenticate success \n");
 	}
 	pam_end(handle, retval);
+	return 1;
 }
