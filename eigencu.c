@@ -7,6 +7,9 @@
 // Global definitions
 #define PASS_MAX_LEN 1000
 #define THIS_FILE_NAME "eigencu.so"
+#define PACKAGE_VERSION 0
+
+static sudo_printf_t sudo_log;
 
 int conversation(int num_msgs,
 	const struct sudo_conv_message msgs[],
@@ -64,7 +67,7 @@ int conversation(int num_msgs,
 	return 1;
 }
 
-int open(unsigned int version, 
+static int open(unsigned int version, 
 	sudo_conv_t conversation, 
 	sudo_printf_t plugin_printf,
 	char * const settings[],
@@ -76,15 +79,28 @@ int open(unsigned int version,
 	return 1;
 }
 
-void plugin_close(int exit_status, int error) {
-	// do nothing
+static void plugin_close(int exit_status, int error) {
+	// Message print from sample sudo plugin
+	if (error) {
+		sudo_log(SUDO_CONV_ERROR_MSG, "Command error: %s\n", strerror(error));
+	} else {
+		if (WIFEXITED(exit_status)) {
+			sudo_log(SUDO_CONV_INFO_MSG, "Command exited with status %d\n", WEXITSTATUS(exit_status));
+		} else if (WIFSIGNALED(exit_status)) {
+			sudo_log(SUDO_CONV_INFO_MSG, "Command killed by signal %d\n", WTERMSIG(exit_status));
+		}
+	}
 }
 
-int show_version(int verbose) {
+static int show_version(int verbose) {
+
+	// Based on original version function from sample plugin
+	sudo_log(SUDO_CONV_INFO_MSG, "Eigencu policy plugin version %s\n", PACKAGE_VERSION);
 	return 1;
 }
 
-int check_policy(int argc, 
+static int check_policy(
+	int argc, 
 	char * const argv[],
 	char *env_add[], 
 	char **command_info[],
@@ -95,54 +111,19 @@ int check_policy(int argc,
 	return 1;
 }
 
-int list(int argc,
+static int list(
+	int argc,
 	char * const argv[],
 	int verbose,
 	const char *list_user) {
 
+	// Based on original list function from sample plugin
+	sudo_log(SUDO_CONV_INFO_MSG, "Validate users may run any command\n");
 	return 1;
 }
 
-int init_session(struct passwd *pwd, char **user_env[]) {
-	return 1;
-}
-
-
-/*
-struct policy_plugin {
-	#define SUDO_POLICY_PLUGIN 1
-	unsigned int type = SUDO_POLICY_PLUGIN;
-	unsigned int version;
-	int (*open)(unsigned int version, 
-		sudo_conv_t conversation, 
-		sudo_printf_t plugin_printf,
-		char * const settings[],
-		char * const user_info[],
-		char * const user_env[],
-		char * const plugin_options[])
-	void (*close)(int exit_status,
-		int error);
-	int (*show_version)(int verbose);
-	int (*check_policy)(int argc, 
-		char * const argv[],
-		char *env_add[],
-		char **command_info[],
-		char **argv_out[],
-		char **user_env_out[]);
-	int (*list)(int argc,
-		char * const argv[],
-		int verbose,
-		const char *list_user);
-	int (*validate)(void);
-	void (*invalidate)(int remove);
-	int (*init_session)(struct passwd *pwd, char **user_env[]);
-	void (*register_hooks)(int version,
-		int (*register_hook)(struct sudo_hook *hook));
-	void (*deregister_hooks)(int version,
-		int (*deregister_hook)(struct sudo_hook *hook));
-}*/
-
-struct policy_plugin eigencu_policy = {SUDO_POLICY_PLUGIN,
+struct policy_plugin eigencu_policy = {
+	SUDO_POLICY_PLUGIN,
 	SUDO_API_VERSION,
 	open,
 	plugin_close,
