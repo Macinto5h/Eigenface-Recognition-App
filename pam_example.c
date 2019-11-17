@@ -73,6 +73,7 @@ int conversation(int num_msg, const struct pam_message **msg, struct pam_respons
         // Copy to pass array
         strcpy(pass, output_to_str);
         // Add pass to the response structure
+        printf("This is the response: %s\n", pass);
         array_resp[i].resp = (char *)malloc(strlen(pass) + 1);
         strcpy(array_resp[i].resp, pass);
 	}
