@@ -26,6 +26,7 @@ class Eigenface:
 		# Initialize empty array for images
 		image_array = []
 		# Load each image from the directory
+		print(os.getcwd())
 		for file in os.listdir(directory):
 			# read the image as a matrix
 			load_image = cv2.imread("{}{}".format(directory,file), 0)
@@ -43,6 +44,10 @@ class Eigenface:
 	Initializer
 	"""
 	def __init__(self, test_dir, user_dir, eigenface_dir, avg_dir, image_dim):
+		# Establish cwd as dir that file is located in
+		abspath = os.path.abspath(__file__)
+		dname = os.path.dirname(abspath)
+		os.chdir(dname)
 		# "Constants"
 		self.FACE_NUMBER = 35
 		self.TEST_DIR = test_dir

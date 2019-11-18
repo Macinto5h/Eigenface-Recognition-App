@@ -9,7 +9,7 @@
 #include <unistd.h>
 
 #define PASS_MAX_LEN 1000
-#define THIS_FILE_NAME "eigencu_add_usr.c"
+#define THIS_FILE_NAME "eigencu_add_usr.o"
 
 // custom conversation to communicate with PAM module
 int conversation(int num_msg, const struct pam_message **msg, struct pam_response **resp, void *appdata_prt) {
@@ -63,8 +63,11 @@ int main(int argc, char *argv[]) {
     Py_Initialize();
     PyObject *sys_path = PySys_GetObject("path");
     char alt_path[PATH_MAX];
-    char *current_path = realpath(THIS_FILE_NAME, alt_path);
+    // char *current_path = realpath(THIS_FILE_NAME, alt_path);
+    // Works on with Linux systems...
+    readlink("/proc/self/exe", alt_path, PATH_MAX);
     alt_path[strlen(alt_path) - strlen(THIS_FILE_NAME)] = 0;
+    printf("This is the current path: %s\n", alt_path);
     PyObject* alt_path_as_string = PyUnicode_FromString(alt_path);
     PyList_Append(sys_path, alt_path_as_string);
     Py_DECREF(alt_path_as_string);
