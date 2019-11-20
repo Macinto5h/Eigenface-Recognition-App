@@ -1,4 +1,0 @@
-#!/bin/bash
-# Script handles compiling c file with pam and python libraries
-
-gcc -I/usr/include/python3.6 -o $1.o $1.c -L/usr/lib/python3.6/config-3.6m-x86_64-linux-gnu -lpython3.6 -lpam -lpam_misc
