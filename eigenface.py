@@ -13,6 +13,7 @@ import cv2
 import os
 import sys
 import numpy as np
+from Crypto.Hash import SHA256
 
 """
 Eigenface class that contains all of its functions, fields, etc.
@@ -22,14 +23,15 @@ class Eigenface:
 	"""
 	Initializer
 	"""
-	def __init__(self, image_dim):
+	def __init__(self, image_dim, user, face_number):
 		# Establish cwd as dir that file is located in
 		abspath = os.path.abspath(__file__)
 		dname = os.path.dirname(abspath)
 		os.chdir(dname)
 		# "Constants"
-		self.FACE_NUMBER = 35
+		self.FACE_NUMBER = face_number
 		self.IMAGE_DIM = image_dim
+		self.current_user = user
 
 		# Define fields by loading pre-existing files, otherwise set to none.
 		# images used as training set
@@ -40,38 +42,52 @@ class Eigenface:
 
 		# set of images that pertain to users
 		try:
-			self.users = np.load("./npy/users.npy")
+			hash = SHA256.new()
+			hash.update(self.current_user.encode('utf-8'))
+			self.users = np.load("./npy/{}.npy".format(hash.hexdigest()))
+			self.user_photo_count = self.users.shape[0]
 		except IOError:
-			self.users = []
+			self.users = np.zeros((1, self.IMAGE_DIM ** 2))
+			self.user_photo_count = 0
 
 		# Average face in the system
 		try:
 			self.avg_face = np.load("./npy/avg_face.npy")
 		except IOError:
-			self.avg_face = np.zeros((self.IMAGE_DIM[1], self.IMAGE_DIM[1]))
+			self.avg_face = np.zeros((self.IMAGE_DIM, self.IMAGE_DIM))
 
 		# Eigenfaces
 		try: 
 			self.eigenfaces = np.load("./npy/eigenfaces.npy")
 		except IOError:
-			self.eigenfaces = np.zeros((self.FACE_NUMBER, self.IMAGE_DIM[1] ** 2))
+			self.eigenfaces = np.zeros((self.FACE_NUMBER, self.IMAGE_DIM ** 2))
 
 		# Eigenfaces normalized into unit vectors
 		try:
 			self.eigenfaces_norm = np.load("./npy/eigenfaces_norm.npy")
 		except IOError:
-			self.eigenfaces_norm = np.zeros((self.FACE_NUMBER, self.IMAGE_DIM[1] ** 2))
+			self.eigenfaces_norm = np.zeros((self.FACE_NUMBER, self.IMAGE_DIM ** 2))
 
 	# ----- METHODS -----
+
+	def add_user_image(self, image):
+		tmp_array = np.zeros((self.user_photo_count + 1, self.IMAGE_DIM ** 2))
+		for i in range (self.user_photo_count):
+			tmp_array[i,:] = self.users[i,:]
+		tmp_array[self.user_photo_count,:] = image.flatten()
+		self.users = tmp_array
+		self.user_photo_count += 1
+		print("Dimensions of the users array {}".format(self.users.shape))
+		self.update()
 
 	"""
 	Builds eigenface algorithm based on directory of images given
 	"""
 	def build(self, directory):
 		self.images = self.getImages(directory)
-		self.users = []
-		self.eigenfaces = np.zeros((self.FACE_NUMBER, self.IMAGE_DIM[1] ** 2))
-		self.eigenfaces_norm = np.zeros((self.FACE_NUMBER, self.IMAGE_DIM[1] ** 2))
+		self.users = np.zeros((1, self.IMAGE_DIM ** 2))
+		self.eigenfaces = np.zeros((self.FACE_NUMBER, self.IMAGE_DIM ** 2))
+		self.eigenfaces_norm = np.zeros((self.FACE_NUMBER, self.IMAGE_DIM ** 2))
 		self.update()
 
 	"""
@@ -87,18 +103,18 @@ class Eigenface:
 
 		fc_dist = sys.maxsize
 		for i in range(len(self.users)):
-			face_class = self.getWeightVectors(self.users[i])
+			face_class = self.getWeightVectors(self.users[i,:].reshape(self.IMAGE_DIM, self.IMAGE_DIM))
 			distance = np.linalg.norm(weight_vectors - face_class)
 
 			if (distance < fc_dist):
 				fc_dist = distance
 		image_dif = read_image - self.avg_face
-		face_space_var = np.zeros(((self.IMAGE_DIM[1], self.IMAGE_DIM[1])))
-		eigenface = self.eigenfaces[0,:].reshape((self.IMAGE_DIM[1], self.IMAGE_DIM[1]))
+		face_space_var = np.zeros(((self.IMAGE_DIM, self.IMAGE_DIM)))
+		eigenface = self.eigenfaces[0,:].reshape((self.IMAGE_DIM, self.IMAGE_DIM))
 		normalized_face = self.normalize(eigenface)
 		face_space_var = (weight_vectors[0] * normalized_face)
 		for i in range(1,self.FACE_NUMBER):
-			eigenface = self.eigenfaces[i,:].reshape((self.IMAGE_DIM[1], self.IMAGE_DIM[1]))
+			eigenface = self.eigenfaces[i,:].reshape((self.IMAGE_DIM, self.IMAGE_DIM))
 			normalized_face = self.normalize(eigenface)
 			face_space_var += (weight_vectors[i] * normalized_face)
 		space_dif = image_dif - face_space_var
@@ -117,7 +133,7 @@ class Eigenface:
 			load_image = cv2.imread("{}{}".format(directory,file), 0)
 			tmp_image = cv2.GaussianBlur(load_image, (5,5), cv2.BORDER_DEFAULT)
 			if (tmp_image.shape[0] != tmp_image.shape[1]):
-				image = tmp_image[20:tmp_image.shape[0] - 20, 0:self.IMAGE_DIM[1]]
+				image = tmp_image[20:tmp_image.shape[0] - 20, 0:self.IMAGE_DIM]
 			else:
 				image = tmp_image
 			# Removes null cases
@@ -154,7 +170,7 @@ class Eigenface:
 	def update(self):
 		# convert all of the loaded images into a matrix for the Eigenface algorithm to use
 		# Create the image matrix where the image data can be manipulated
-		image_matrix = np.zeros((len(self.images) + len(self.users), self.IMAGE_DIM[1] ** 2))
+		image_matrix = np.zeros((len(self.images) + len(self.users), self.IMAGE_DIM ** 2))
 		# Add flattened image data into the image matrix
 		im_index = 0
 		for i in range(0, len(self.images)):
@@ -164,15 +180,15 @@ class Eigenface:
 			image_matrix[im_index,:] = self.users[i].flatten()
 			im_index += 1
 		# Calculate the mean image with the image matrix
-		matrix_sum = np.zeros((self.IMAGE_DIM[1] ** 2))
+		matrix_sum = np.zeros((self.IMAGE_DIM ** 2))
 		for i in range(len(image_matrix)):
 			matrix_sum += image_matrix[i,:]
 		mean = matrix_sum * (1 / len(image_matrix))
 		# Create the average face
-		self.avg_face = mean.reshape((self.IMAGE_DIM[1], self.IMAGE_DIM[1]))
+		self.avg_face = mean.reshape((self.IMAGE_DIM, self.IMAGE_DIM))
 		np.save("./npy/avg_face.npy", self.avg_face);
 		# Subtract the mean from all of the original images
-		mean_sub_images = np.zeros((len(image_matrix), self.IMAGE_DIM[1] ** 2))
+		mean_sub_images = np.zeros((len(image_matrix), self.IMAGE_DIM ** 2))
 		for i in range(0, len(image_matrix)):
 			mean_sub_images[i,:] = image_matrix[i,:] - mean
 		# Create a matrix with equivalent eigenvectors with the covariance
@@ -191,15 +207,21 @@ class Eigenface:
 			self.eigenfaces_norm[eigenface_index,:] = self.normalize(eigenface)
 			eigenface_index += 1
 		np.save("./npy/images.npy", self.images);
-		np.save("./npy/users.npy", self.users);
-		np.save("./npy/eigenfaces.npy", self.eigenfaces);
-		np.save("./npy/eigenfaces_norm.npy", self.eigenfaces_norm);
+		hash = SHA256.new()
+		hash.update(self.current_user.encode('utf-8'))
+		np.save("./npy/{}.npy".format(hash.hexdigest()), self.users)
+		np.save("./npy/eigenfaces.npy", self.eigenfaces)
+		np.save("./npy/eigenfaces_norm.npy", self.eigenfaces_norm)
 
 if __name__ == '__main__':
 	# Initialize class
-	eigenface = Eigenface((178, 178))
-	eigenface.build("../eigenface-training-images/")
+	eigenface = Eigenface(178, "mac", 35)
+	# eigenface.build("../eigenface-training-images/")
 	# eigenface.build()
+	load_image = cv2.imread("../users/6.jpg", 0)
+	tmp_image = cv2.GaussianBlur(load_image, (5,5), cv2.BORDER_DEFAULT)
+	eigenface.add_user_image(tmp_image)
+
 	print("Test 1: Unknown Users")
 	photo = cv2.imread("../eigenface-training-images/mdark-01.jpg",0)
 	fc_dist, fs_dist = eigenface.getDistances(photo)

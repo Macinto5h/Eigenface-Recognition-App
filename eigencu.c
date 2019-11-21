@@ -31,6 +31,8 @@ static gid_t runas_gid = -1;
 static int use_sudoedit = 0;
 // Directory of plugin
 const char *file_dir;
+// User invoking sudo
+const char *invoking_user = NULL;
 
 static int open(
 	unsigned int version, 
@@ -41,8 +43,8 @@ static int open(
 	char * const user_env[],
 	char * const plugin_options[]) {
 
-	printf("MSG: Entered eigencu.c open method \n");
 	char * const *ui;
+	char * const *usr;
 	struct passwd *pw;
 	const char *runas_user = NULL;
 	struct group *gr;
@@ -95,6 +97,13 @@ static int open(
 		// Get the directory the plugin originated from
 		if (strncmp(*ui, "plugin_dir=", sizeof("plugin_dir=") - 1) == 0) {
 			file_dir = *ui + sizeof("plugin_dir=") -1;
+		}
+	}
+
+	for (usr = user_info; *usr != NULL; usr++) {
+		// Get the name of the user invoking sudo
+		if (strncmp(*usr, "user=", sizeof("user=") - 1) == 0) {
+			invoking_user = *usr + sizeof("user=") - 1;
 		}
 	}
 
@@ -155,46 +164,55 @@ static int check_authority(void) {
 	
 	PyObject *sys_path = PySys_GetObject("path");
 	char alt_path[PATH_MAX];
-	// char *current_path = realpath(THIS_FILE_NAME, alt_path);
 	strcpy(alt_path, file_dir);
 	alt_path[strlen(alt_path)] = 0;
 	PyObject* alt_path_as_string = PyUnicode_FromString(alt_path);
-	printf("Alt path is: %s\n", alt_path);
 	PyList_Append(sys_path, alt_path_as_string);
 	char pass[PASS_MAX_LEN];
 	int breakpoint_index = 0;
 	PyObject* login_mod = PyImport_ImportModule("login");
-	printf("Reached breakpoint: %d\n", breakpoint_index++);
 	if (login_mod == NULL) {
 		PyErr_Print();
 		return 0;
 	}
 	// Retrieve class in the module
 	PyObject* login_app_class = PyObject_GetAttrString(login_mod, "LoginApp");
-	printf("Reached breakpoint: %d\n", breakpoint_index++);
-	if (login_app_class == NULL) return 0;
+	if (login_app_class == NULL) {
+		PyErr_Print();
+		return 0;
+	}
 	Py_DECREF(login_mod);
 	// Build arguments to be fed into class/function
 	PyObject* resp_args = Py_BuildValue("()");
-	printf("Reached breakpoint: %d\n", breakpoint_index++);
-	if (resp_args == NULL) return 0;
+	if (resp_args == NULL) {
+		PyErr_Print();
+		return 0;
+	}
 	// Call login class
 	PyObject* callable_login = PyObject_CallObject(login_app_class, resp_args);
-	printf("Reached breakpoint: %d\n", breakpoint_index++);
-	if (callable_login == NULL) return 0;
+	if (callable_login == NULL) {
+		PyErr_Print();
+		return 0;
+	}
 	Py_DECREF(login_app_class);
 	Py_DECREF(resp_args);
+
+	// PyObject* run_args = Py_BuildValue("(s)", invoking_user);
+	// if (run_args == NULL) {
+	// 	PyErr_Print();
+	// 	return 0;
+	// }
 	// Call run method
-	PyObject* call_run_func = PyObject_CallMethod(callable_login, "run", "()");
-	printf("Reached breakpoint: %d\n", breakpoint_index++);
+	printf("Value of the invoked user is: %s\n", invoking_user);
+	PyObject* call_run_func = PyObject_CallMethod(callable_login, "run", "(s)", invoking_user);
 	if (call_run_func == NULL) {
 		PyErr_Print();
 		return 0;
 	}
 	Py_DECREF(callable_login);
+	// Py_DECREF(run_args);
 	// Convert output to a string format
 	PyObject* run_func_repr = PyObject_Repr(call_run_func);
-	printf("Reached breakpoint: %d\n", breakpoint_index++);
 	if (run_func_repr == NULL) {
 		PyErr_Print();
 		return 0;
@@ -202,22 +220,24 @@ static int check_authority(void) {
 	Py_DECREF(call_run_func);
 	// Encode the string
 	PyObject* run_func_str = PyUnicode_AsEncodedString(run_func_repr,"utf-8", "~E~");
-	printf("Reached breakpoint: %d\n", breakpoint_index++);
-	if (run_func_str == NULL) return 0;
+	if (run_func_str == NULL) {
+		PyErr_Print();
+		return 0;
+	}
 	Py_DECREF(run_func_repr);
 	// Move to string to char pointer
 	char *output_to_str = PyBytes_AS_STRING(run_func_str);
-	printf("Reached breakpoint: %d\n", breakpoint_index++);
-	if (output_to_str == NULL) return 0;
+	if (output_to_str == NULL) {
+		PyErr_Print();
+		return 0;
+	}
 	Py_DECREF(run_func_str);
 	// Copy to pass array
 	strcpy(pass, output_to_str);
-	// replies[i].reply = pass;
 	Py_DECREF(alt_path_as_string);
 	Py_DECREF(sys_path);
 	Py_Finalize();
 
-	printf("This is pass: %s\n", pass);
 	if (strcmp(pass, "True") == 0) {
 		return 1;
 	} else {
