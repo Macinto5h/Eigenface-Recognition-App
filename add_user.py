@@ -8,7 +8,6 @@ By: M.J. Camara
 """
 
 import cv2
-import os
 from camera_feed import CameraFeed
 from eigenface import Eigenface
 from controller import Controller
@@ -17,8 +16,8 @@ from controller import Controller
 Wrapper class for the Add User Program
 """
 class AddUserApp(Controller):
-
-	def run(self):
+	# Run method starts the program, initializing the camera_feed
+	def run(self, user):
 		# Variables for program loop
 		try_count = 0
 		usr_img_count = 0
@@ -34,34 +33,28 @@ class AddUserApp(Controller):
 				app_failure = True
 			else:
 				# Run eigenface app on image
-				eigenface = Eigenface(self.TRAINING_DIR, self.USER_DIR, self.EIGENFACE_DIR, self.AVG_DIR, (self.IMAGE_WIDTH, self.IMAGE_HEIGHT))
-				eigenface.build()
+				eigenface = Eigenface(self.IMAGE_WIDTH, user, self.FACE_NUMBER)
 				gray_photo = cv2.cvtColor(photo, cv2.COLOR_BGR2GRAY)
 				value = 0
 				for i in range(gray_photo.shape[0]):
 					for j in range(gray_photo.shape[1]):
 						value += gray_photo[i,j]
 				mean = value / (gray_photo.shape[0] ** 2)
-				# print("----- MEAN BRIGHTNESS IS: {}".format(mean))
 				fc_dist, fs_dist = eigenface.getDistances(gray_photo)
 				# if it is face space proceed
 				# if it is not a face class, add the user
 				if (fs_dist < self.FACE_SPACE_THRESHOLD):
 					if ((fc_dist > self.FACE_CLASS_THRESHOLD and usr_img_count == 0) or (fc_dist < self.FACE_CLASS_THRESHOLD and usr_img_count > 0)):
-						image_count = len(os.listdir(self.USER_DIR))
-						cv2.imwrite("{}{}.jpg".format(self.USER_DIR, image_count), photo)
+						eigenface.add_user_image(gray_photo)
 						try_count = 0
 						usr_img_count += 1
 						message = "Another pic at a different angle"
 					else:
-						# print("----- User already exists in the system")
 						try_count += 1
 						message = "User already in system."
 				else:
-					# print("----- face space distance too far")
 					message = "Face not found, try again."
 					try_count += 1
-				# print("----- This is fc dist: {:.2e}, this is fs dist: {:.2e}".format(fc_dist, fs_dist))
 		if (try_count == 3):
 			print("MESSAGE: Amount of attempts exceeded, program has automatically closed.")
 		elif (usr_img_count == 3):
@@ -73,3 +66,4 @@ class AddUserApp(Controller):
 if __name__ == '__main__':
 	# Initialize class
 	add_user_app = AddUserApp()
+	add_user_app.run("mac")

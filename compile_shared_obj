@@ -1,5 +1,0 @@
-#!/bin/bash
-# Script compiles c file into shared object file
-# Assume that python library is being used.
-
-gcc -shared -I/usr/include/python3.6 -o /usr/lib/sudo/$1.so -fPIC $1.c -L/usr/lib/python3.6/config-3.6m-x86_64-linux-gnu -lpython3.6
