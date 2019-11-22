@@ -49,8 +49,9 @@ int main(int argc, char *argv[]) {
 	}
 
     struct passwd *p = getpwuid(getuid());
+    username = p -> pw_name;
 
-	pam_set_item(handle, PAM_USER, p -> pw_name);
+	pam_set_item(handle, PAM_USER, username);
 
 	retval = pam_authenticate(handle, 0);
 	if (retval != PAM_SUCCESS) {
@@ -67,7 +68,6 @@ int main(int argc, char *argv[]) {
     // Works on with Linux systems...
     readlink("/proc/self/exe", alt_path, PATH_MAX);
     alt_path[strlen(alt_path) - strlen(THIS_FILE_NAME)] = 0;
-    printf("This is the current path: %s\n", alt_path);
     PyObject* alt_path_as_string = PyUnicode_FromString(alt_path);
     PyList_Append(sys_path, alt_path_as_string);
     Py_DECREF(alt_path_as_string);
@@ -94,9 +94,10 @@ int main(int argc, char *argv[]) {
     }
     Py_DECREF(add_user_class);
     Py_DECREF(class_args);
-    PyObject* call_run_func = PyObject_CallMethod(callable_add_user, "run", "()");
+    PyObject* call_run_func = PyObject_CallMethod(callable_add_user, "run", "(s)", username);
     if (call_run_func == NULL) {
-        fprintf(stderr, "ERROR: Failure to call run method.");
+        printf("Enters this conditional");
+        PyErr_Print();
         return 1;
     }
     Py_DECREF(callable_add_user);

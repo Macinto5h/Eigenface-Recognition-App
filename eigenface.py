@@ -77,7 +77,6 @@ class Eigenface:
 		tmp_array[self.user_photo_count,:] = image.flatten()
 		self.users = tmp_array
 		self.user_photo_count += 1
-		print("Dimensions of the users array {}".format(self.users.shape))
 		self.update()
 
 	"""

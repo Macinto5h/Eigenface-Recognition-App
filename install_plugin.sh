@@ -2,6 +2,9 @@
 # Script installs and compiles the files in the /usr/local/libexec/sudo directory
 DIR=/usr/local/libexec/sudo
 
+# Set permissions of the npy files
+chmod -R 777 $DIR/npy/
+
 # Copy all of the py files into the directory
 cp ./controller.py $DIR/controller.py
 cp ./eigenface.py $DIR/eigenface.py
