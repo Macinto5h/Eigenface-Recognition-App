@@ -18,7 +18,8 @@ cp -r ./npy/ $DIR/npy/
 # Copy the c files into the directory
 cp ./eigencu.c $DIR/eigencu.c
 cp ./eigencu_add_usr.c $DIR/eigencu_add_usr.c
+cp ./ecuconst.h $DIR/ecuconst.h
 
 # Compile the c files into the appropriate object files
-gcc -shared -I/usr/include/python3.6 -o $DIR/eigencu.so -fPIC $DIR/eigencu.c -L/usr/lib/python3.6/config-3.6m-x86_64-linux-gnu -lpython3.6
-gcc -I/usr/include/python3.6 -o $DIR/eigencu_add_usr.o $DIR/eigencu_add_usr.c -L/usr/lib/python3.6/config-3.6m-x86_64-linux-gnu -lpython3.6 -lpam -lpam_misc
+gcc -shared -I/usr/include/python3.6 -I$DIR -o $DIR/eigencu.so -fPIC $DIR/eigencu.c -L/usr/lib/python3.6/config-3.6m-x86_64-linux-gnu -lpython3.6
+gcc -I/usr/include/python3.6 -I$DIR -o $DIR/eigencu_add_usr.o $DIR/eigencu_add_usr.c -L/usr/lib/python3.6/config-3.6m-x86_64-linux-gnu -lpython3.6 -lpam -lpam_misc

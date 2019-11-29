@@ -13,7 +13,8 @@ import cv2
 import os
 import sys
 import numpy as np
-from Crypto.Hash import SHA256
+# from Crypto.Hash import SHA256
+import Crypto.Hash.SHA256 
 
 """
 Eigenface class that contains all of its functions, fields, etc.
@@ -42,7 +43,7 @@ class Eigenface:
 
 		# set of images that pertain to users
 		try:
-			hash = SHA256.new()
+			hash = Crypto.Hash.SHA256.new()
 			hash.update(self.current_user.encode('utf-8'))
 			self.users = np.load("./npy/{}.npy".format(hash.hexdigest()))
 			self.user_photo_count = self.users.shape[0]
@@ -70,7 +71,7 @@ class Eigenface:
 
 	# ----- METHODS -----
 
-	def add_user_image(self, image):
+	def addUserImage(self, image):
 		tmp_array = np.zeros((self.user_photo_count + 1, self.IMAGE_DIM ** 2))
 		for i in range (self.user_photo_count):
 			tmp_array[i,:] = self.users[i,:]
@@ -119,6 +120,48 @@ class Eigenface:
 		space_dif = image_dif - face_space_var
 		fs_dist = np.linalg.norm(space_dif)
 		return fc_dist, fs_dist
+
+	"""
+	Returns the distance of face class distance only
+	"""
+	def getFaceClassDist(self, input_image):
+		if (input_image.shape[0] != input_image.shape[1]):
+			read_image = input_image[20:input_image.shape[0]-20, 0:input_image.shape[1]]
+		else:
+			read_image = input_image
+
+		weight_vectors = self.getWeightVectors(read_image.copy())
+
+		fc_dist = sys.maxsize
+		for i in range(len(self.users)):
+			face_class = self.getWeightVectors(self.users[i,:].reshape(self.IMAGE_DIM, self.IMAGE_DIM))
+			distance = np.linalg.norm(weight_vectors - face_class)
+
+			if (distance < fc_dist):
+				fc_dist = distance
+		return fc_dist
+
+	"""
+	Returns the distance of the face space only
+	"""
+	def getFaceSpaceDist(self, input_image):
+		if (input_image.shape[0] != input_image.shape[1]):
+			read_image = input_image[20:input_image.shape[0]-20, 0:input_image.shape[1]]
+		else:
+			read_image = input_image
+		weight_vectors = self.getWeightVectors(read_image.copy())
+		image_dif = read_image - self.avg_face
+		face_space_var = np.zeros(((self.IMAGE_DIM, self.IMAGE_DIM)))
+		eigenface = self.eigenfaces[0,:].reshape((self.IMAGE_DIM, self.IMAGE_DIM))
+		normalized_face = self.normalize(eigenface)
+		face_space_var = (weight_vectors[0] * normalized_face)
+		for i in range(1,self.FACE_NUMBER):
+			eigenface = self.eigenfaces[i,:].reshape((self.IMAGE_DIM, self.IMAGE_DIM))
+			normalized_face = self.normalize(eigenface)
+			face_space_var += (weight_vectors[i] * normalized_face)
+		space_dif = image_dif - face_space_var
+		fs_dist = np.linalg.norm(space_dif)
+		return fs_dist
 
 	"""
 	Loads images from a given directory, and returns them as an array
