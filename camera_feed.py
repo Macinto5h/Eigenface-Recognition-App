@@ -45,17 +45,22 @@ class CameraFeed:
 				x_pos = (int(video_width) // 2) - (image_width)
 				y_pos = (int(video_height) // 2) - (image_height)
 
-				# Draw rectangle on live image
-				# frame_temp = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-				# frame_copy = self.brighten(frame_temp,brightness)
+				# Draw frame for live image
 				frame_copy = frame.copy()
-				cv2.rectangle(frame_copy, 
-					(x_pos - 8, y_pos - 8), 
-					(x_pos + (image_width*2), y_pos + (image_height*2)), 
-					(0, 0, 255), 
-					thickness = 1, 
-					lineType = 8, 
+				cv2.circle(frame_copy,
+					(int(video_width) // 2, int(video_height) // 2),
+					152, 
+					(0, 0, 255),
+					thickness = 1,
+					lineType = 8,
 					shift = 0)
+				cv2.line(frame_copy,
+					(int(video_width) // 2, (int(video_height) // 2) + 6),
+					(int(video_width) // 2, (int(video_height) // 2) + 86),
+					(0, 0, 255),
+					thickness = 1,
+					lineType = 8,
+					shift = 0) 
 				cv2.putText(frame_copy,
 					message,
 					(0,25),
@@ -79,7 +84,7 @@ class CameraFeed:
 					# SPACE pressed
 					# Crop image to desired length and return it
 					captured_photo = frame[y_pos:y_pos + (image_height*2), x_pos:x_pos + (image_width*2)].copy()
-					# captured_photo = cv2.cvtColor(captured_photo, cv2.COLOR_BGR2GRAY)
+					captured_photo = cv2.cvtColor(captured_photo, cv2.COLOR_BGR2GRAY)
 					captured_photo = cv2.resize(captured_photo, (image_width, image_height))
 					break
 				elif keypress % 256 == 91:
