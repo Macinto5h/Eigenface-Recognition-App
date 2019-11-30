@@ -271,8 +271,8 @@ static int check_authority(void) {
 	}
 
 	// Convert from PyObjects into doubles
-	double face_class = PyLong_AsDouble(class_dist);
-	double face_space = PyLong_AsDouble(space_dist);
+	double face_class = PyFloat_AsDouble(class_dist);
+	double face_space = PyFloat_AsDouble(space_dist);
 
 	/*PyObject* login_mod = PyImport_ImportModule("login");
 	if (login_mod == NULL) {
