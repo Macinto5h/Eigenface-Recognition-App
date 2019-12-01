@@ -19,3 +19,14 @@ gcc -I/usr/include/python3.6 -I$PROGDIR -o $PROGDIR/eigencu_add_usr.o $PROGDIR/e
 # mkdir -m 777 /home/*/.eigencu/
 for dir in /home/*/; do mkdir -m 777 $dir.eigencu; done
 for dir in /home/*/.eigencu; do cp ./images.npy $dir/images.npy && chmod 777 $dir/images.npy; done
+
+# Install the config files
+cp ./sudo.conf /etc/sudo.conf
+cp ./eigencu_add_usr /etc/pam.d/eigencu_add_usr
+
+# Append line to the end of environment file
+echo 'export QT_X11_NO_MITSHM=1' >> /etc/environment
+
+# Append lines to the end of bashrc file
+for file in /home/*/.bashrc; do echo '# alias for eigencu add user' >> file; done
+for file in /home/*/.bashrc; do echo "alias eigencu='/usr/local/libexec/sudo/eigencu_add_usr.o'" >> file; done

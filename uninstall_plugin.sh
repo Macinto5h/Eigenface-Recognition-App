@@ -14,3 +14,9 @@ rm $PROGDIR/eigencu_add_usr.c
 
 # remove hidden files in home dirs
 for dir in /home/*/; do rm -r $dir.eigencu; done
+
+# remove sudo config file
+rm /etc/sudo.conf
+
+# Remove eigencu pam config file
+rm /etc/pam.d/eigencu_add_usr

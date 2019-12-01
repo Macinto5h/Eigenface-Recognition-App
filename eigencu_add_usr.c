@@ -49,7 +49,6 @@ int adduser(char *username) {
         alt_path[alt_i] = 0;
         alt_i--;
     }
-    printf("This is the alt path:  %s \n", alt_path);
     PyObject* alt_path_as_string = PyUnicode_FromString(alt_path);
     PyList_Append(sys_path, alt_path_as_string);
     Py_DECREF(alt_path_as_string);

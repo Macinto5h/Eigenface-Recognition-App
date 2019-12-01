@@ -13,7 +13,6 @@ import cv2
 import os
 import sys
 import numpy as np
-# from Crypto.Hash import SHA256
 import Crypto.Hash.SHA256 
 
 """
@@ -109,7 +108,7 @@ class Eigenface:
 	"""
 	Returns the distances of a given input image
 	"""
-	def getDistances(self, input_image):
+	"""def getDistances(self, input_image):
 		if (input_image.shape[0] != input_image.shape[1]):
 			read_image = input_image[20:input_image.shape[0]-20, 0:input_image.shape[1]]
 		else:
@@ -135,7 +134,7 @@ class Eigenface:
 			face_space_var += (weight_vectors[i] * normalized_face)
 		space_dif = image_dif - face_space_var
 		fs_dist = np.linalg.norm(space_dif)
-		return fc_dist, fs_dist
+		return fc_dist, fs_dist"""
 
 	"""
 	Returns the distance of face class distance only
@@ -155,7 +154,6 @@ class Eigenface:
 
 			if (distance < fc_dist):
 				fc_dist = distance
-		print("eigenface.py :: fc_dist = {}".format(fc_dist))
 		return fc_dist
 
 	"""
@@ -178,7 +176,6 @@ class Eigenface:
 			face_space_var += (weight_vectors[i] * normalized_face)
 		space_dif = image_dif - face_space_var
 		fs_dist = np.linalg.norm(space_dif)
-		print("eigenface.py :: fs_dist = {}".format(fs_dist))
 		return fs_dist
 
 	"""
@@ -245,13 +242,13 @@ class Eigenface:
 	def update(self):
 		# convert all of the loaded images into a matrix for the Eigenface algorithm to use
 		# Create the image matrix where the image data can be manipulated
-		image_matrix = np.zeros((len(self.images) + len(self.users), self.IMAGE_DIM ** 2))
+		image_matrix = np.zeros((len(self.images) + self.user_photo_count, self.IMAGE_DIM ** 2))
 		# Add flattened image data into the image matrix
 		im_index = 0
 		for i in range(0, len(self.images)):
 			image_matrix[im_index,:] = self.images[i].flatten()
 			im_index += 1
-		for i in range(0, len(self.users)):
+		for i in range(0, self.user_photo_count):
 			image_matrix[im_index,:] = self.users[i].flatten()
 			im_index += 1
 		# Calculate the mean image with the image matrix
@@ -282,8 +279,9 @@ class Eigenface:
 			self.eigenfaces_norm[eigenface_index,:] = self.normalize(eigenface)
 			eigenface_index += 1
 		np.save("/home/{}/.eigencu/images.npy".format(self.current_user), self.images)
-		hash = Crypto.Hash.SHA256.new()
-		hash.update(self.current_user.encode('utf-8'))
-		np.save("/home/{}/.eigencu/{}.npy".format(self.current_user, hash.hexdigest()), self.users)
+		if (self.user_photo_count > 0):
+			hash = Crypto.Hash.SHA256.new()
+			hash.update(self.current_user.encode('utf-8'))
+			np.save("/home/{}/.eigencu/{}.npy".format(self.current_user, hash.hexdigest()), self.users)
 		np.save("/home/{}/.eigencu/eigenfaces.npy".format(self.current_user), self.eigenfaces)
 		np.save("/home/{}/.eigencu/eigenfaces_norm.npy".format(self.current_user), self.eigenfaces_norm)
