@@ -8,6 +8,7 @@
 #include <grp.h>
 #include <stdio.h>
 #include <paths.h>
+#include "ecuconst.h"
 
 // Global definitions
 #define PASS_MAX_LEN 1000
@@ -130,15 +131,11 @@ static int open(
 	plugin_state.settings = settings;
 	plugin_state.user_info = user_info;
 
-	// print the plugin directory
-	printf("This is the plugin dir: %s\n", file_dir);
-
 	// return successful open
 	return 1;
 }
 
 static void plugin_close(int exit_status, int error) {
-	printf("MSG: Entered eigencu.c plugin_close method \n");
 	// Message print from sample sudo plugin
 	if (error) {
 		sudo_log(SUDO_CONV_ERROR_MSG, "Command error: %s\n", strerror(error));
@@ -152,7 +149,6 @@ static void plugin_close(int exit_status, int error) {
 }
 
 static int show_version(int verbose) {
-	printf("MSG: Entered eigencu.c show_version method \n");
 	// Based on original version function from sample plugin
 	sudo_log(SUDO_CONV_INFO_MSG, "Eigencu policy plugin version %s\n", PACKAGE_VERSION);
 	return 1;
@@ -161,7 +157,7 @@ static int show_version(int verbose) {
 static int check_authority(void) {
 
 	Py_Initialize();
-	
+
 	PyObject *sys_path = PySys_GetObject("path");
 	char alt_path[PATH_MAX];
 	strcpy(alt_path, file_dir);
@@ -170,77 +166,124 @@ static int check_authority(void) {
 	PyList_Append(sys_path, alt_path_as_string);
 	char pass[PASS_MAX_LEN];
 	int breakpoint_index = 0;
-	PyObject* login_mod = PyImport_ImportModule("login");
-	if (login_mod == NULL) {
-		PyErr_Print();
-		return 0;
-	}
-	// Retrieve class in the module
-	PyObject* login_app_class = PyObject_GetAttrString(login_mod, "LoginApp");
-	if (login_app_class == NULL) {
-		PyErr_Print();
-		return 0;
-	}
-	Py_DECREF(login_mod);
-	// Build arguments to be fed into class/function
-	PyObject* resp_args = Py_BuildValue("()");
-	if (resp_args == NULL) {
-		PyErr_Print();
-		return 0;
-	}
-	// Call login class
-	PyObject* callable_login = PyObject_CallObject(login_app_class, resp_args);
-	if (callable_login == NULL) {
-		PyErr_Print();
-		return 0;
-	}
-	Py_DECREF(login_app_class);
-	Py_DECREF(resp_args);
 
-	// PyObject* run_args = Py_BuildValue("(s)", invoking_user);
-	// if (run_args == NULL) {
-	// 	PyErr_Print();
-	// 	return 0;
-	// }
-	// Call run method
-	printf("Value of the invoked user is: %s\n", invoking_user);
-	PyObject* call_run_func = PyObject_CallMethod(callable_login, "run", "(s)", invoking_user);
-	if (call_run_func == NULL) {
+	// Import the camera_feed py file
+	PyObject* cam_feed_mod = PyImport_ImportModule("camera_feed");
+	if (cam_feed_mod == NULL) {
+	    PyErr_Print();
+	    return 0;
+	}
+
+	// Fetch the CameraFeed class
+	PyObject* cam_feed_cls = PyObject_GetAttrString(cam_feed_mod, "CameraFeed");
+	if (cam_feed_cls == NULL) {
+	    PyErr_Print();
+	    return 0;
+	} 
+	Py_DECREF(cam_feed_mod);
+
+	// Set empty args
+	PyObject* cls_args = Py_BuildValue("()");
+	if (cls_args == NULL) {
+	    PyErr_Print();
+	    return 0;
+	}
+
+	// Call and initialize CameraFeed object
+	PyObject* call_cam_feed = PyObject_CallObject(cam_feed_cls, cls_args);
+	if (call_cam_feed == NULL) {
+	    PyErr_Print();
+	    return 0;
+	}
+	Py_DECREF(cls_args);
+	Py_DECREF(cam_feed_cls);
+
+	// Retrieve input photo via capture method
+	PyObject* input_photo = PyObject_CallMethod(call_cam_feed, 
+            "capture", 
+            "(s,i,i,s)",
+            "Add as User",
+            IMG_WIDTH,
+            IMG_WIDTH,
+            "Press 'Space' to Login");
+	if (input_photo == NULL) {
 		PyErr_Print();
 		return 0;
 	}
-	Py_DECREF(callable_login);
-	// Py_DECREF(run_args);
-	// Convert output to a string format
-	PyObject* run_func_repr = PyObject_Repr(call_run_func);
-	if (run_func_repr == NULL) {
-		PyErr_Print();
-		return 0;
+	Py_DECREF(call_cam_feed);
+
+	// Import the eigenface py file
+	PyObject* eigenface_mod = PyImport_ImportModule("eigenface");
+	if (eigenface_mod == NULL) {
+	    PyErr_Print();
+	    return 0;
 	}
-	Py_DECREF(call_run_func);
-	// Encode the string
-	PyObject* run_func_str = PyUnicode_AsEncodedString(run_func_repr,"utf-8", "~E~");
-	if (run_func_str == NULL) {
-		PyErr_Print();
-		return 0;
+
+	// Fetch the eigenface class
+	PyObject* eigenface_cls = PyObject_GetAttrString(eigenface_mod, "Eigenface");
+	if (eigenface_cls == NULL) {
+	    PyErr_Print();
+	    return 0;
 	}
-	Py_DECREF(run_func_repr);
-	// Move to string to char pointer
-	char *output_to_str = PyBytes_AS_STRING(run_func_str);
-	if (output_to_str == NULL) {
-		PyErr_Print();
-		return 0;
+	Py_DECREF(eigenface_mod);
+
+	// Create arguments needed for Eigenface class
+	PyObject* eig_args = Py_BuildValue("(i,s,i)",
+	    IMG_WIDTH,
+	    invoking_user,
+	    TOTAL_EIG);
+	if (eig_args == NULL) {
+	    PyErr_Print();
+	    return 0;
 	}
-	Py_DECREF(run_func_str);
-	// Copy to pass array
-	strcpy(pass, output_to_str);
+
+	// Call and initialize Eigenface Object
+	PyObject* call_eigenface = PyObject_CallObject(eigenface_cls, eig_args);
+	if (call_eigenface == NULL) {
+	    PyErr_Print();
+	    return 0;
+	}
+	Py_DECREF(eigenface_cls);
+	Py_DECREF(eig_args);
+
+	// call the getFaceClassDist method of Eigenfaces
+	PyObject* class_dist = PyObject_CallMethod(call_eigenface, 
+	    "getFaceClassDist",
+	    "(O)",
+	    input_photo);
+	if (class_dist == NULL) {
+	    PyErr_Print();
+	    return 0;
+	}
+
+	// call the getFaceSpaceDist method of Eigenfaces
+	PyObject* space_dist = PyObject_CallMethod(call_eigenface,
+	    "getFaceSpaceDist",
+	    "(O)",
+	    input_photo);
+	if (space_dist == NULL) {
+	    PyErr_Print();
+	    return 0;
+	}
+
+	// Convert from PyObjects into doubles
+	double face_class = PyFloat_AsDouble(class_dist);
+	double face_space = PyFloat_AsDouble(space_dist);
+
+	Py_DECREF(class_dist);
+    Py_DECREF(space_dist);
+    Py_DECREF(call_eigenface);
+    Py_DECREF(input_photo);
 	Py_DECREF(alt_path_as_string);
 	Py_DECREF(sys_path);
+
 	Py_Finalize();
 
-	if (strcmp(pass, "True") == 0) {
+	if (face_space < FS_THRES && face_class < FC_THRES) {
+		printf("MSG: Face successfully recognized! \n");
 		return 1;
 	} else {
+		printf("MSG: Face not recognized or found. \n");
 		return 0;
 	}
 }
@@ -402,8 +445,6 @@ static int check_policy(
 	char **argv_out[],
 	char **user_env_out[]) {
 
-	printf("MSG: Entered eigencu.c check_policy method \n");
-	// bad idea to leave function like this.
 	char *command;
 
 	if (!argc || argv[0] == NULL) {
@@ -459,7 +500,6 @@ static int list(
 	int verbose,
 	const char *list_user) {
 
-	printf("MSG: Entered eigencu.c list method \n");
 	// Based on original list function from sample plugin
 	sudo_log(SUDO_CONV_INFO_MSG, "Validate users may run any command\n");
 	return 1;

@@ -13,7 +13,7 @@ import cv2
 import os
 import sys
 import numpy as np
-from Crypto.Hash import SHA256
+import Crypto.Hash.SHA256 
 
 """
 Eigenface class that contains all of its functions, fields, etc.
@@ -26,8 +26,8 @@ class Eigenface:
 	def __init__(self, image_dim, user, face_number):
 		# Establish cwd as dir that file is located in
 		abspath = os.path.abspath(__file__)
-		dname = os.path.dirname(abspath)
-		os.chdir(dname)
+		self.dname = os.path.dirname(abspath)
+		os.chdir(self.dname)
 		# "Constants"
 		self.FACE_NUMBER = face_number
 		self.IMAGE_DIM = image_dim
@@ -36,15 +36,15 @@ class Eigenface:
 		# Define fields by loading pre-existing files, otherwise set to none.
 		# images used as training set
 		try:
-			self.images = np.load("./npy/images.npy")
+			self.images = np.load("/home/{}/.eigencu/images.npy".format(self.current_user))
 		except IOError:
 			self.images = []
 
 		# set of images that pertain to users
 		try:
-			hash = SHA256.new()
+			hash = Crypto.Hash.SHA256.new()
 			hash.update(self.current_user.encode('utf-8'))
-			self.users = np.load("./npy/{}.npy".format(hash.hexdigest()))
+			self.users = np.load("/home/{}/.eigencu/{}.npy".format(self.current_user,hash.hexdigest()))
 			self.user_photo_count = self.users.shape[0]
 		except IOError:
 			self.users = np.zeros((1, self.IMAGE_DIM ** 2))
@@ -52,27 +52,29 @@ class Eigenface:
 
 		# Average face in the system
 		try:
-			self.avg_face = np.load("./npy/avg_face.npy")
+			self.avg_face = np.load("/home/{}/.eigencu/avg_face.npy".format(self.current_user))
 		except IOError:
 			self.avg_face = np.zeros((self.IMAGE_DIM, self.IMAGE_DIM))
 
 		# Eigenfaces
 		try: 
-			self.eigenfaces = np.load("./npy/eigenfaces.npy")
+			self.eigenfaces = np.load("/home/{}/.eigencu/eigenfaces.npy".format(self.current_user))
 		except IOError:
 			self.eigenfaces = np.zeros((self.FACE_NUMBER, self.IMAGE_DIM ** 2))
 
 		# Eigenfaces normalized into unit vectors
 		try:
-			self.eigenfaces_norm = np.load("./npy/eigenfaces_norm.npy")
+			self.eigenfaces_norm = np.load("/home/{}/.eigencu/eigenfaces_norm.npy".format(self.current_user))
 		except IOError:
 			self.eigenfaces_norm = np.zeros((self.FACE_NUMBER, self.IMAGE_DIM ** 2))
+		self.update()
 
 	# ----- METHODS -----
 
-	def add_user_image(self, image):
+	def addUserImage(self, image):
+
 		tmp_array = np.zeros((self.user_photo_count + 1, self.IMAGE_DIM ** 2))
-		for i in range (self.user_photo_count):
+		for i in range (0, self.user_photo_count):
 			tmp_array[i,:] = self.users[i,:]
 		tmp_array[self.user_photo_count,:] = image.flatten()
 		self.users = tmp_array
@@ -84,15 +86,29 @@ class Eigenface:
 	"""
 	def build(self, directory):
 		self.images = self.getImages(directory)
+		# self.users = np.zeros((1, self.IMAGE_DIM ** 2))
 		self.users = np.zeros((1, self.IMAGE_DIM ** 2))
 		self.eigenfaces = np.zeros((self.FACE_NUMBER, self.IMAGE_DIM ** 2))
 		self.eigenfaces_norm = np.zeros((self.FACE_NUMBER, self.IMAGE_DIM ** 2))
 		self.update()
 
 	"""
+	Exports the current user's images into the given directory
+	"""
+	def exportUserImages(self, directory):
+		os.chdir(directory)
+		try:
+			for i in range(len(self.users)):
+				cv2.imwrite("{}.jpg".format(i), self.users[i,:].reshape(self.IMAGE_DIM, self.IMAGE_DIM))
+			os.chdir(self.dname)
+			return 1
+		except OSError:
+			os.chdir(self.dname)
+			return 0	
+	"""
 	Returns the distances of a given input image
 	"""
-	def getDistances(self, input_image):
+	"""def getDistances(self, input_image):
 		if (input_image.shape[0] != input_image.shape[1]):
 			read_image = input_image[20:input_image.shape[0]-20, 0:input_image.shape[1]]
 		else:
@@ -118,7 +134,49 @@ class Eigenface:
 			face_space_var += (weight_vectors[i] * normalized_face)
 		space_dif = image_dif - face_space_var
 		fs_dist = np.linalg.norm(space_dif)
-		return fc_dist, fs_dist
+		return fc_dist, fs_dist"""
+
+	"""
+	Returns the distance of face class distance only
+	"""
+	def getFaceClassDist(self, input_image):
+		if (input_image.shape[0] != input_image.shape[1]):
+			read_image = input_image[20:input_image.shape[0]-20, 0:input_image.shape[1]]
+		else:
+			read_image = input_image
+
+		weight_vectors = self.getWeightVectors(read_image.copy())
+
+		fc_dist = sys.maxsize
+		for i in range(len(self.users)):
+			face_class = self.getWeightVectors(self.users[i,:].reshape(self.IMAGE_DIM, self.IMAGE_DIM))
+			distance = np.linalg.norm(weight_vectors - face_class)
+
+			if (distance < fc_dist):
+				fc_dist = distance
+		return fc_dist
+
+	"""
+	Returns the distance of the face space only
+	"""
+	def getFaceSpaceDist(self, input_image):
+		if (input_image.shape[0] != input_image.shape[1]):
+			read_image = input_image[20:input_image.shape[0]-20, 0:input_image.shape[1]]
+		else:
+			read_image = input_image
+		weight_vectors = self.getWeightVectors(read_image.copy())
+		image_dif = read_image - self.avg_face
+		face_space_var = np.zeros(((self.IMAGE_DIM, self.IMAGE_DIM)))
+		eigenface = self.eigenfaces[0,:].reshape((self.IMAGE_DIM, self.IMAGE_DIM))
+		normalized_face = self.normalize(eigenface)
+		face_space_var = (weight_vectors[0] * normalized_face)
+		for i in range(1,self.FACE_NUMBER):
+			eigenface = self.eigenfaces[i,:].reshape((self.IMAGE_DIM, self.IMAGE_DIM))
+			normalized_face = self.normalize(eigenface)
+			face_space_var += (weight_vectors[i] * normalized_face)
+		space_dif = image_dif - face_space_var
+		fs_dist = np.linalg.norm(space_dif)
+		return fs_dist
 
 	"""
 	Loads images from a given directory, and returns them as an array
@@ -164,18 +222,33 @@ class Eigenface:
 		return temp_matrix
 
 	"""
+	Removes all images of the given user, wipes the slate clean.
+	"""
+	def removeUserImages(self):
+		try:
+			usrhash = Crypto.Hash.SHA256.new()
+			usrhash.update(self.current_user.encode('utf-8'))
+			os.remove("/home/{}/.eigencu/{}.npy".format(self.current_user, usrhash.hexdigest()))
+			self.users = np.empty((1, self.IMAGE_DIM ** 2))
+			self.user_photo_count = 0
+			self.update()
+			return 1
+		except OSError:
+			return 0
+
+	"""
 	Updates the eigenface algorithm based on user or base image changes
 	"""
 	def update(self):
 		# convert all of the loaded images into a matrix for the Eigenface algorithm to use
 		# Create the image matrix where the image data can be manipulated
-		image_matrix = np.zeros((len(self.images) + len(self.users), self.IMAGE_DIM ** 2))
+		image_matrix = np.zeros((len(self.images) + self.user_photo_count, self.IMAGE_DIM ** 2))
 		# Add flattened image data into the image matrix
 		im_index = 0
 		for i in range(0, len(self.images)):
 			image_matrix[im_index,:] = self.images[i].flatten()
 			im_index += 1
-		for i in range(0, len(self.users)):
+		for i in range(0, self.user_photo_count):
 			image_matrix[im_index,:] = self.users[i].flatten()
 			im_index += 1
 		# Calculate the mean image with the image matrix
@@ -185,7 +258,7 @@ class Eigenface:
 		mean = matrix_sum * (1 / len(image_matrix))
 		# Create the average face
 		self.avg_face = mean.reshape((self.IMAGE_DIM, self.IMAGE_DIM))
-		np.save("./npy/avg_face.npy", self.avg_face);
+		np.save("/home/{}/.eigencu/avg_face.npy".format(self.current_user), self.avg_face)
 		# Subtract the mean from all of the original images
 		mean_sub_images = np.zeros((len(image_matrix), self.IMAGE_DIM ** 2))
 		for i in range(0, len(image_matrix)):
@@ -205,61 +278,10 @@ class Eigenface:
 			self.eigenfaces[eigenface_index,:] = eigenface
 			self.eigenfaces_norm[eigenface_index,:] = self.normalize(eigenface)
 			eigenface_index += 1
-		np.save("./npy/images.npy", self.images);
-		hash = SHA256.new()
-		hash.update(self.current_user.encode('utf-8'))
-		np.save("./npy/{}.npy".format(hash.hexdigest()), self.users)
-		np.save("./npy/eigenfaces.npy", self.eigenfaces)
-		np.save("./npy/eigenfaces_norm.npy", self.eigenfaces_norm)
-
-if __name__ == '__main__':
-	# Initialize class
-	eigenface = Eigenface(178, "mac", 35)
-	# eigenface.build("../eigenface-training-images/")
-	# eigenface.build()
-	load_image = cv2.imread("../users/6.jpg", 0)
-	tmp_image = cv2.GaussianBlur(load_image, (5,5), cv2.BORDER_DEFAULT)
-	eigenface.add_user_image(tmp_image)
-
-	print("Test 1: Unknown Users")
-	photo = cv2.imread("../eigenface-training-images/mdark-01.jpg",0)
-	fc_dist, fs_dist = eigenface.getDistances(photo)
-	print("This is fc dist: {:.2e}, this is fs dist: {:.2e}".format(fc_dist, fs_dist))
-	photo = cv2.imread("../eigenface-training-images/mlight-01.jpg",0)
-	fc_dist, fs_dist = eigenface.getDistances(photo)
-	print("This is fc dist: {:.2e}, this is fs dist: {:.2e}".format(fc_dist, fs_dist))
-	photo = cv2.imread("../eigenface-training-images/wdark-01.jpg",0)
-	fc_dist, fs_dist = eigenface.getDistances(photo)
-	print("This is fc dist: {:.2e}, this is fs dist: {:.2e}".format(fc_dist, fs_dist))
-	photo = cv2.imread("../eigenface-training-images/wlight-01.jpg",0)
-	fc_dist, fs_dist = eigenface.getDistances(photo)
-	print("This is fc dist: {:.2e}, this is fs dist: {:.2e}".format(fc_dist, fs_dist))
-	# print("Test 2: Known User")
-	# photo = cv2.imread("../users/0.jpg",0)
-	# fc_dist, fs_dist = eigenface.getDistances(photo)
-	# print("This is fc dist: {:.2e}, this is fs dist: {:.2e}".format(fc_dist, fs_dist))
-	# print("Test 3: No face")
-	# photo = cv2.imread("test_photograph.jpg",0)
-	# fc_dist, fs_dist = eigenface.getDistances(photo)
-	# print("This is fc dist: {:.2e}, this is fs dist: {:.2e}".format(fc_dist, fs_dist))
-	# photo = cv2.imread("test_photograph_2.jpg",0)
-	# fc_dist, fs_dist = eigenface.getDistances(photo)
-	# print("This is fc dist: {:.2e}, this is fs dist: {:.2e}".format(fc_dist, fs_dist))
-	# photo = cv2.imread("test_photograph_3.jpg",0)
-	# fc_dist, fs_dist = eigenface.getDistances(photo)
-	# print("This is fc dist: {:.2e}, this is fs dist: {:.2e}".format(fc_dist, fs_dist))
-	# print("Test 4: Gaussian Blur on last unknown user")
-	# photo = cv2.imread("../eigenface-training-images/wlight-01.jpg",0)
-	# dst = cv2.GaussianBlur(photo, (5,5), cv2.BORDER_DEFAULT)
-	# fc_dist, fs_dist = eigenface.getDistances(dst)
-	# print("This is fc dist: {:.2e}, this is fs dist: {:.2e}".format(fc_dist, fs_dist))
-	# print("Test 5: Gaussian Blur of known user")
-	# photo = cv2.imread("../users/0.jpg",0)
-	# dst = cv2.GaussianBlur(photo, (5,5), cv2.BORDER_DEFAULT)
-	# fc_dist, fs_dist = eigenface.getDistances(dst)
-	# print("This is fc dist: {:.2e}, this is fs dist: {:.2e}".format(fc_dist, fs_dist))
-	# print("Test 6: Gaussian Blur of no face")
-	# photo = cv2.imread("test_photograph_3.jpg",0)
-	# dst = cv2.GaussianBlur(photo, (5,5), cv2.BORDER_DEFAULT)
-	# fc_dist, fs_dist = eigenface.getDistances(dst)
-	# print("This is fc dist: {:.2e}, this is fs dist: {:.2e}".format(fc_dist, fs_dist))
+		np.save("/home/{}/.eigencu/images.npy".format(self.current_user), self.images)
+		if (self.user_photo_count > 0):
+			hash = Crypto.Hash.SHA256.new()
+			hash.update(self.current_user.encode('utf-8'))
+			np.save("/home/{}/.eigencu/{}.npy".format(self.current_user, hash.hexdigest()), self.users)
+		np.save("/home/{}/.eigencu/eigenfaces.npy".format(self.current_user), self.eigenfaces)
+		np.save("/home/{}/.eigencu/eigenfaces_norm.npy".format(self.current_user), self.eigenfaces_norm)

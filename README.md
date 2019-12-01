@@ -2,28 +2,59 @@
 Standalone python application with OpenCV that demonstrates facial recognition through the Eigenface algorithm.
 
 # Installation
+
 1. Required packages
+
 Install the required packages by running the following commands.
 
-`sudo apt-get install python3.6 python3-dev python3-pip libpam-dev
-pip install opencv-python`
+```bash
+sudo apt-get install python3.6 python3-dev python3-pip libpam-dev
+pip install opencv-python
+```
 
-*There may be more libraries I have neglected to mention*
-2. System Preparation
+*There may be more libraries I have neglected to mention, but the ones above are the most significant.*
+
+2. Installing the Program
 
 **IMPORTANT: If configured incorrectly, this application could make `sudo` unusuable. Enable the `su` command for your user before attempting to install this program.**
 
-The plugin may only load a grey window when launched. To resolve this issue with X11 simply apply the following line to the bottom of the file `/etc/environment/`
+To install the program follow the commands below and it will setup the files automatically.
 
-`export QT_X11_NO_MITSHM=1`
+```bash
+git clone https://github.com/Macinto5h/Eigenface-Recognition-App/
+cd ./Eigenface-Recognition-App/
+su
+./install_plugin.sh
+```
 
-To permanently add `eigencu` as a command for the user simply add this line to the end of the `~./bashrc` file
+3. Uninstalling the Program
 
-`# alias for eigencu add user
-alias eigencu='/usr/local/libexec/sudo/eigencu_add_usr.o'`
+To Uninstall the program first run the uninstall shell file.
 
-To allow the eigencu add user utility to communicate with `unix-pam.so` the file `/etc/pam.d/eigencu_add_usr` needs to be added. The content of the file is as follows.
+```bash
+su
+./uninstall_plugin.sh
+```
 
-`auth required  pam_unix.so
-account required  pam_unix.so
-password  required  pam_unix.so`
+Some lines appended to files need to be removed manually. 
+
+The file `/etc/environment` has a line appended for EigenCU `export QT_X11_NO_MITSHM=1`. Remove the last instance of this line if there is more than one (means that other utilities may still need this setting).
+
+The file `~./bashrc` has the following appended that should be deleted by the user:
+
+```bash
+# alias for eigencu add user
+alias eigencu='/usr/local/libexec/sudo/eigencu_add_usr.o'
+```
+
+4. User Images
+
+To add an instance of the user's face into the system, run the command `eigencu -a`.
+
+To export all instances of the user's face from the system into a directory, run the command `eigencu -e /directory/name/here`
+
+To remove all instances of the user's face from the system, run the command `eigencu -r`
+
+5. Running the program
+
+This step is very simple: `sudo the_command_you_want_to_run`
