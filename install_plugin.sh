@@ -2,6 +2,10 @@
 # Script installs and compiles the files in the /usr/local/libexec/sudo directory
 PROGDIR=/usr/local/libexec/sudo
 
+# Make directory if it does not exist
+mkdir /usr/local/libexec
+mkdir $PROGDIR
+
 # Copy all of the py/npy files into the directory
 cp ./eigenface.py $PROGDIR/eigenface.py
 cp ./camera_feed.py $PROGDIR/camera_feed.py
@@ -26,7 +30,3 @@ cp ./eigencu_add_usr /etc/pam.d/eigencu_add_usr
 
 # Append line to the end of environment file
 echo 'export QT_X11_NO_MITSHM=1' >> /etc/environment
-
-# Append lines to the end of bashrc file
-for file in /home/*/.bashrc; do echo '# alias for eigencu add user' >> file; done
-for file in /home/*/.bashrc; do echo "alias eigencu='/usr/local/libexec/sudo/eigencu_add_usr.o'" >> file; done
