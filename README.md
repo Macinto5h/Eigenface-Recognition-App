@@ -5,26 +5,35 @@ Standalone python application with OpenCV that demonstrates facial recognition t
 
 1. Required packages
 
-Install the required packages by running the following commands.
+To install the packages in Debian/Ubuntu Distros:
 
 ```bash
-sudo apt-get install python3.6 python3-dev python3-pip libpam-dev
-pip install opencv-python
+sudo apt install python3.6 python3-dev python3-pip libpam-dev git
+sudo pip3 install opencv-python
 ```
 
-*There may be more libraries I have neglected to mention, but the ones above are the most significant.*
+For other distros, install the packages with the appropriate package tool or manually.
 
 2. Installing the Program
 
-**IMPORTANT: If configured incorrectly, this application could make `sudo` unusuable. Enable the `su` command for your user before attempting to install this program.**
+**IMPORTANT: If configured incorrectly, this application could make `sudo` unusuable. Enable the `su` command for your user to access root privileges before attempting to install this program.**
 
 To install the program follow the commands below and it will setup the files automatically.
 
 ```bash
 git clone https://github.com/Macinto5h/Eigenface-Recognition-App/
 cd ./Eigenface-Recognition-App/
+chmod +x ./install_plugin.sh
+chmod +x ./uninstall_plugin.sh
 su
 ./install_plugin.sh
+```
+
+Add the following to the end of the `~.bashrc` file
+
+```bash
+# alias for eigencu add user
+alias eigencu='/usr/local/libexec/sudo/eigencu_add_usr.o'
 ```
 
 3. Uninstalling the Program
@@ -38,9 +47,9 @@ su
 
 Some lines appended to files need to be removed manually. 
 
-The file `/etc/environment` has a line appended for EigenCU `export QT_X11_NO_MITSHM=1`. Remove the last instance of this line if there is more than one (means that other utilities may still need this setting).
+The file `/etc/environment` has a line appended for EigenCU `export QT_X11_NO_MITSHM=1`. Remove the last instance of this line if there is more than one (means that other utilities may still need this setting or you ran `install_plugin.sh` more than once).
 
-The file `~./bashrc` has the following appended that should be deleted by the user:
+The file `~.bashrc` has the following appended that should be deleted by the user:
 
 ```bash
 # alias for eigencu add user
