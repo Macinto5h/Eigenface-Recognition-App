@@ -160,9 +160,7 @@ static int check_authority(void) {
 
 	PyObject *sys_path = PySys_GetObject("path");
 	char alt_path[PATH_MAX];
-	// strcpy(alt_path, file_dir);
 	strcpy(alt_path, "/usr/local/libexec/sudo");
-	// alt_path[strlen(alt_path)] = 0;
 	PyObject* alt_path_as_string = PyUnicode_FromString(alt_path);
 	PyList_Append(sys_path, alt_path_as_string);
 	char pass[PASS_MAX_LEN];
@@ -209,6 +207,9 @@ static int check_authority(void) {
             "Press 'Space' to Login");
 	if (input_photo == NULL) {
 		PyErr_Print();
+		return 0;
+	} else if (input_photo == Py_None) {
+		printf("MSG: Window closed, cancelling operation\n");
 		return 0;
 	}
 	Py_DECREF(call_cam_feed);

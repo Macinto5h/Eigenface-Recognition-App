@@ -27,10 +27,13 @@ class CameraFeed:
 			camera = cv2.VideoCapture(0)
 
 			# Set up user window
-			cv2.namedWindow(window_name)
+			cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
 
 			# Image brightness offset
 			brightness = 0
+
+			# Captured photo
+			captured_photo = None
 
 			# Infinite loop until escape is pressed or window closed
 			while cv2.getWindowProperty(window_name, cv2.WND_PROP_VISIBLE) >= 1:
@@ -64,7 +67,7 @@ class CameraFeed:
 				cv2.putText(frame_copy,
 					message,
 					(0,25),
-					cv2.FONT_HERSHEY_SIMPLEX,
+					cv2.FONT_HERSHEY_TRIPLEX,
 					1,
 					(0, 0, 255),
 					3)
@@ -98,6 +101,7 @@ class CameraFeed:
 		except cv2.error as e:
 			print('Default webcam not found. Make sure the device is connected.')
 			return None
+			
 	def brighten(self, image, offset):
 		return image
 
@@ -105,4 +109,5 @@ if __name__ == '__main__':
 	# Initialize class
 	add_user_app = CameraFeed()
 	photo = add_user_app.capture('Add as user', 178, 178, "Test")
-	cv2.imwrite("test_photograph_3.jpg", photo)
+	if (photo is not None):
+		cv2.imwrite("test_photograph_3.jpg", photo)

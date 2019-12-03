@@ -132,7 +132,9 @@ int adduser(char *username) {
             msg);
         if (input_photo == NULL) {
             PyErr_Print();
-            printf("input_photo returned null \n");
+            add_finish = 1;
+        } else if (input_photo == Py_None) {
+            printf("MSG: Window closed, cancelling add function.\n");
             add_finish = 1;
         } else {
             
