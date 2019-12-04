@@ -20,7 +20,6 @@ int conversation(int num_msg, const struct pam_message **msg, struct pam_respons
     for (int i = 0; i < num_msg; i++) {
         array_resp[i].resp_retcode = 0;
         const char *msg_content = msg[i] -> msg;
-        // printf("The message content %s\n", msg_content);
         char pass[PASS_MAX_LEN];
         char *user_input = getpass(msg_content);
         strcpy(pass, user_input);
@@ -56,7 +55,7 @@ int adduser(char *username) {
     int try_count = 0;
     int add_finish = 0;
     char *msg;
-    msg = "Press 'space' to add yourself as a user.";
+    msg = "Press 'space' to add.";
 
     // Import the eigenface py file
     PyObject* eigenface_mod = PyImport_ImportModule("eigenface");
@@ -171,7 +170,6 @@ int adduser(char *username) {
             }
 
             if (face_space < FS_THRES) {
-                printf("Face space distance is %f\n", face_space);
                 // Face is detected from input image
                 if (face_class > FC_THRES) {
                     // Face is unknown, must be added to user
@@ -185,7 +183,6 @@ int adduser(char *username) {
                     // Face is near identical to another photo in the system.
                     try_count++;
                     printf("MSG: user image near identical to previous entry. \n");
-                    printf("Face class distance is %f\n", face_class);
                     msg = "Image already in system";
                 }
             } else {

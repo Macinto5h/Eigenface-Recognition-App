@@ -13,7 +13,7 @@
 // Global definitions
 #define PASS_MAX_LEN 1000
 #define THIS_FILE_NAME "eigencu.so"
-#define PACKAGE_VERSION 0
+#define PACKAGE_VERSION "0.0.1a"
 
 static struct plugin_state {
 	char **envp;
