@@ -1,4 +1,4 @@
-# Eigenface-Recognition-App
+# EigenCU
 Standalone python application with OpenCV that demonstrates facial recognition through the Eigenface algorithm.
 
 # Installation
